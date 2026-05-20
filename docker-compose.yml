@@ -1,0 +1,81 @@
+services:
+  postgres:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: vinted
+    ports:
+      - "127.0.0.1:5432:5432"
+    volumes:
+      - vinted_pg:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d vinted"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    restart: unless-stopped
+    networks:
+      - db
+
+  backend:
+    build:
+      context: ./backend
+    ports:
+      - "127.0.0.1:${BACKEND_PORT:-3000}:3000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      PORT: "3000"
+      HOST: "0.0.0.0"
+      ALERTS_STORE: "postgres"
+      DATABASE_URL: "postgres://postgres:postgres@postgres:5432/vinted"
+      # Default: auto-bootstrap session via Playwright (no manual cookies required).
+      # You can switch to static by setting VINTED_SESSION_MODE=static and providing VINTED_*.
+      VINTED_SESSION_MODE: "${VINTED_SESSION_MODE:-playwright}"
+      VINTED_LOCALE: "fr-FR"
+      VINTED_ORDER: "relevance"
+      # Provide these at runtime (docker compose --env-file .env up)
+      VINTED_COOKIE: "${VINTED_COOKIE:-}"
+      VINTED_CSRF_TOKEN: "${VINTED_CSRF_TOKEN:-}"
+      VINTED_ANON_ID: "${VINTED_ANON_ID:-}"
+      TELEGRAM_BOT_TOKEN: "${TELEGRAM_BOT_TOKEN:-}"
+      TELEGRAM_CHAT_ID: "${TELEGRAM_CHAT_ID:-}"
+      TELEGRAM_ENABLE_COMMANDS: "${TELEGRAM_ENABLE_COMMANDS:-false}"
+      TELEGRAM_CLEAR_LIMIT: "${TELEGRAM_CLEAR_LIMIT:-50}"
+    dns:
+      - "1.1.1.1"
+      - "8.8.8.8"
+    healthcheck:
+      test: ["CMD-SHELL", "node -e \"fetch('http://127.0.0.1:3000/v1/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))\""]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+    networks:
+      - db
+      - public
+
+  frontend:
+    build:
+      context: ./frontend
+      args:
+        # The frontend runs in the browser on your machine, so it must reach the API via localhost.
+        VITE_API_BASE_URL: "${VITE_API_BASE_URL:-http://localhost:${BACKEND_PORT:-3000}}"
+    depends_on:
+      backend:
+        condition: service_healthy
+    ports:
+      - "127.0.0.1:${FRONTEND_PORT:-5173}:8080"
+    restart: unless-stopped
+    networks:
+      - public
+
+networks:
+  db:
+    internal: true
+  public:
+
+volumes:
+  vinted_pg:

@@ -1,0 +1,19 @@
+FROM node:20-slim
+
+WORKDIR /app
+
+# Playwright deps + browsers for VINTED_SESSION_MODE=playwright in dev.
+ENV PLAYWRIGHT_BROWSERS_PATH=/ms-playwright
+
+COPY package.json package-lock.json ./
+RUN npm ci
+RUN npx playwright install --with-deps chromium && chown -R node:node /ms-playwright
+
+COPY tsconfig.json ./
+COPY src ./src
+
+USER node
+EXPOSE 3000
+
+CMD ["npm", "run", "dev"]
+
