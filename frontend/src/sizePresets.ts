@@ -2,6 +2,9 @@ import { type CatalogOption } from "./types";
 
 export type SizePresetKey =
   | "women_clothing"
+  | "women_shoes"
+  | "bras"
+  | "women_belts"
   | "men_clothing"
   | "men_shoes"
   | "rings"
@@ -39,6 +42,55 @@ export const SIZE_PRESETS: Record<SizePresetKey, { label: string; options: Catal
     ]
   }
   ,
+  // From Vinted web UI: name="size_ids_7[]" (Chaussures femmes)
+  women_shoes: {
+    label: "Femme (Chaussures)",
+    options: [
+      { id: 1364, title: "34" },
+      { id: 1580, title: "34.5" },
+      { id: 55, title: "35" },
+      { id: 1195, title: "35.5" },
+      { id: 56, title: "36" },
+      { id: 1196, title: "36.5" },
+      { id: 57, title: "37" },
+      { id: 1197, title: "37.5" },
+      { id: 58, title: "38" },
+      { id: 1198, title: "38.5" },
+      { id: 59, title: "39" },
+      { id: 1199, title: "39.5" },
+      { id: 60, title: "40" },
+      { id: 1200, title: "40.5" },
+      { id: 61, title: "41" },
+      { id: 1201, title: "41.5" },
+      { id: 62, title: "42" },
+      { id: 1579, title: "42.5" },
+      { id: 63, title: "43" },
+      { id: 1573, title: "43.5" },
+      { id: 1574, title: "44" },
+      { id: 1575, title: "44.5" },
+      { id: 1576, title: "45" },
+      { id: 1578, title: "46" },
+      { id: 94, title: "Taille unique" },
+      { id: 99, title: "Autre" }
+    ]
+  },
+  // From Vinted web UI: name="size_ids_53[]" (Soutiens-gorge)
+  bras: {
+    label: "Soutiens-gorge",
+    options: [
+      { id: 1667, title: "75D" },
+      { id: 1262, title: "90D" },
+      { id: 1395, title: "XS" },
+      { id: 1396, title: "S" }
+    ]
+  },
+  // From Vinted web UI: name="size_ids_64[]" (Ceintures femme)
+  women_belts: {
+    label: "Ceintures femme",
+    options: [
+      { id: 1582, title: "Ajustable" }
+    ]
+  },
   // From Vinted web UI: name="size_ids_14[]" (men clothing sizes)
   men_clothing: {
     label: "Homme (Tailles vêtements)",

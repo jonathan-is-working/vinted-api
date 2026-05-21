@@ -4,6 +4,9 @@ import {
   SIZE_IDS_14_TO_TITLE,
   SIZE_IDS_38_TO_TITLE,
   SIZE_IDS_4_TO_TITLE,
+  SIZE_IDS_53_TO_TITLE,
+  SIZE_IDS_64_TO_TITLE,
+  SIZE_IDS_7_TO_TITLE,
   SIZE_IDS_52_TO_TITLE,
   SIZE_IDS_60_TO_TITLE,
   SIZE_IDS_61_TO_TITLE,
@@ -65,6 +68,9 @@ export class TelegramNotifier {
 
       const sizes: string[] = [
         ...mapIds(parsed?.sizeIds4, SIZE_IDS_4_TO_TITLE),
+        ...mapIds(parsed?.sizeIds7, SIZE_IDS_7_TO_TITLE),
+        ...mapIds(parsed?.sizeIds53, SIZE_IDS_53_TO_TITLE),
+        ...mapIds(parsed?.sizeIds64, SIZE_IDS_64_TO_TITLE),
         ...mapIds(parsed?.sizeIds14, SIZE_IDS_14_TO_TITLE),
         ...mapIds(parsed?.sizeIds38, SIZE_IDS_38_TO_TITLE),
         ...mapIds(parsed?.sizeIds52, SIZE_IDS_52_TO_TITLE),

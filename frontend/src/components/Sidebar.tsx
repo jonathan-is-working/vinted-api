@@ -45,6 +45,9 @@ function formatAlertSummary(a: Alert): string {
   const countArr = (v: unknown) => (Array.isArray(v) ? v.length : 0);
   const sizesCount =
     countArr(a.query?.sizeIds4) +
+    countArr(a.query?.sizeIds7) +
+    countArr(a.query?.sizeIds53) +
+    countArr(a.query?.sizeIds64) +
     countArr(a.query?.sizeIds14) +
     countArr(a.query?.sizeIds38) +
     countArr(a.query?.sizeIds52) +

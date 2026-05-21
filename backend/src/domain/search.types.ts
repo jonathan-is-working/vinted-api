@@ -39,6 +39,9 @@ export const SearchQuerySchema = z.object({
   // Grouped sizes as seen in Vinted web UI (e.g. size_ids_4[], size_ids_14[]).
   sizeIds4: IdsSchema,
   sizeIds14: IdsSchema,
+  sizeIds7: IdsSchema, // chaussures femme
+  sizeIds53: IdsSchema, // soutiens-gorge
+  sizeIds64: IdsSchema, // ceintures femme
   sizeIds38: IdsSchema, // chaussures hommes
   sizeIds52: IdsSchema, // bagues
   sizeIds60: IdsSchema, // chapeaux adulte

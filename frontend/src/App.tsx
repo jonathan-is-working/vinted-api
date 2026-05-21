@@ -7,6 +7,7 @@ import { SkeletonRow } from "./components/SkeletonRow";
 import { Icon } from "./components/Icon";
 import { FiltersModal } from "./components/FiltersModal";
 import { api, API_BASE_URL } from "./api";
+import { SIZE_PRESETS } from "./sizePresets";
 import {
   SearchItem,
   SearchResponse,
@@ -46,6 +47,9 @@ export default function App() {
   const [brandSelected, setBrandSelected] = useState<CatalogOption[]>([]);
 
   const [sizeSelectedWomen, setSizeSelectedWomen] = useState<CatalogOption[]>([]);
+  const [sizeSelectedWomenShoes, setSizeSelectedWomenShoes] = useState<CatalogOption[]>([]);
+  const [sizeSelectedBras, setSizeSelectedBras] = useState<CatalogOption[]>([]);
+  const [sizeSelectedWomenBelts, setSizeSelectedWomenBelts] = useState<CatalogOption[]>([]);
   const [sizeSelectedMen, setSizeSelectedMen] = useState<CatalogOption[]>([]);
   const [sizeSelectedMenShoes, setSizeSelectedMenShoes] = useState<CatalogOption[]>([]);
   const [sizeSelectedRings, setSizeSelectedRings] = useState<CatalogOption[]>([]);
@@ -169,6 +173,18 @@ export default function App() {
     }
   }
 
+  function mapSizeIdsToOptions(ids: unknown, preset: keyof typeof SIZE_PRESETS): CatalogOption[] {
+    if (!Array.isArray(ids)) return [];
+    const dict = new Map<number, string>(SIZE_PRESETS[preset].options.map((o) => [o.id, o.title]));
+    const out: CatalogOption[] = [];
+    for (const raw of ids) {
+      const n = Number(raw);
+      if (!Number.isFinite(n)) continue;
+      out.push({ id: n, title: dict.get(n) ?? String(n) });
+    }
+    return out;
+  }
+
   function loadFiltersFromAlert(alert: Alert) {
     setQ(alert.query?.q ?? "");
     setCurrency(alert.query?.currency ?? "EUR");
@@ -183,18 +199,21 @@ export default function App() {
     setColorSelected((prev) => (alert.query?.colorIds ?? []).map((id) => ({ id, title: `#${id}` })));
     setMaterialSelected((prev) => (alert.query?.materialIds ?? []).map((id) => ({ id, title: `#${id}` })));
 
-    setSizeSelectedWomen((prev) => (alert.query?.sizeIds4 ?? []).map((id) => ({ id, title: String(id) })));
-    setSizeSelectedMen((prev) => (alert.query?.sizeIds14 ?? []).map((id) => ({ id, title: String(id) })));
-    setSizeSelectedMenShoes((prev) => (alert.query?.sizeIds38 ?? []).map((id) => ({ id, title: String(id) })));
-    setSizeSelectedRings((prev) => (alert.query?.sizeIds52 ?? []).map((id) => ({ id, title: String(id) })));
-    setSizeSelectedAdultHats((prev) => (alert.query?.sizeIds60 ?? []).map((id) => ({ id, title: String(id) })));
-    setSizeSelectedAdultGloves((prev) => (alert.query?.sizeIds61 ?? []).map((id) => ({ id, title: String(id) })));
-    setSizeSelectedWatches((prev) => (alert.query?.sizeIds62 ?? []).map((id) => ({ id, title: String(id) })));
-    setSizeSelectedMenBelts((prev) => (alert.query?.sizeIds63 ?? []).map((id) => ({ id, title: String(id) })));
-    setSizeSelectedMenSocks((prev) => (alert.query?.sizeIds73 ?? []).map((id) => ({ id, title: String(id) })));
-    setSizeSelectedMenShirts((prev) => (alert.query?.sizeIds74 ?? []).map((id) => ({ id, title: String(id) })));
-    setSizeSelectedMenSuitJackets((prev) => (alert.query?.sizeIds75 ?? []).map((id) => ({ id, title: String(id) })));
-    setSizeSelectedMenPants((prev) => (alert.query?.sizeIds77 ?? []).map((id) => ({ id, title: String(id) })));
+    setSizeSelectedWomen(mapSizeIdsToOptions(alert.query?.sizeIds4, "women_clothing"));
+    setSizeSelectedWomenShoes(mapSizeIdsToOptions(alert.query?.sizeIds7, "women_shoes"));
+    setSizeSelectedBras(mapSizeIdsToOptions(alert.query?.sizeIds53, "bras"));
+    setSizeSelectedWomenBelts(mapSizeIdsToOptions(alert.query?.sizeIds64, "women_belts"));
+    setSizeSelectedMen(mapSizeIdsToOptions(alert.query?.sizeIds14, "men_clothing"));
+    setSizeSelectedMenShoes(mapSizeIdsToOptions(alert.query?.sizeIds38, "men_shoes"));
+    setSizeSelectedRings(mapSizeIdsToOptions(alert.query?.sizeIds52, "rings"));
+    setSizeSelectedAdultHats(mapSizeIdsToOptions(alert.query?.sizeIds60, "adult_hats"));
+    setSizeSelectedAdultGloves(mapSizeIdsToOptions(alert.query?.sizeIds61, "adult_gloves"));
+    setSizeSelectedWatches(mapSizeIdsToOptions(alert.query?.sizeIds62, "watches"));
+    setSizeSelectedMenBelts(mapSizeIdsToOptions(alert.query?.sizeIds63, "men_belts"));
+    setSizeSelectedMenSocks(mapSizeIdsToOptions(alert.query?.sizeIds73, "men_socks"));
+    setSizeSelectedMenShirts(mapSizeIdsToOptions(alert.query?.sizeIds74, "men_shirts"));
+    setSizeSelectedMenSuitJackets(mapSizeIdsToOptions(alert.query?.sizeIds75, "men_suit_jackets"));
+    setSizeSelectedMenPants(mapSizeIdsToOptions(alert.query?.sizeIds77, "men_pants"));
 
     setPriceMin(alert.query?.priceMin != null ? String((alert.query.priceMin / 100).toFixed(2)) : "");
     setPriceMax(alert.query?.priceMax != null ? String((alert.query.priceMax / 100).toFixed(2)) : "");
@@ -219,6 +238,9 @@ export default function App() {
           ...(brandSelected.length ? { brandIds: brandSelected.map((b) => b.id) } : {}),
           ...(sizeSelectedWomen.length ? { sizeIds4: sizeSelectedWomen.map((s) => s.id) } : {}),
           ...(sizeSelectedMen.length ? { sizeIds14: sizeSelectedMen.map((s) => s.id) } : {}),
+          ...(sizeSelectedWomenShoes.length ? { sizeIds7: sizeSelectedWomenShoes.map((s) => s.id) } : {}),
+          ...(sizeSelectedBras.length ? { sizeIds53: sizeSelectedBras.map((s) => s.id) } : {}),
+          ...(sizeSelectedWomenBelts.length ? { sizeIds64: sizeSelectedWomenBelts.map((s) => s.id) } : {}),
           ...(sizeSelectedMenShoes.length ? { sizeIds38: sizeSelectedMenShoes.map((s) => s.id) } : {}),
           ...(sizeSelectedRings.length ? { sizeIds52: sizeSelectedRings.map((s) => s.id) } : {}),
           ...(sizeSelectedAdultHats.length ? { sizeIds60: sizeSelectedAdultHats.map((s) => s.id) } : {}),
@@ -323,6 +345,9 @@ export default function App() {
     if (brandSelected.length) url.searchParams.set("brandIds", brandSelected.map((b) => b.id).join(","));
     if (sizeSelectedWomen.length) url.searchParams.set("sizeIds4", sizeSelectedWomen.map((s) => s.id).join(","));
     if (sizeSelectedMen.length) url.searchParams.set("sizeIds14", sizeSelectedMen.map((s) => s.id).join(","));
+    if (sizeSelectedWomenShoes.length) url.searchParams.set("sizeIds7", sizeSelectedWomenShoes.map((s) => s.id).join(","));
+    if (sizeSelectedBras.length) url.searchParams.set("sizeIds53", sizeSelectedBras.map((s) => s.id).join(","));
+    if (sizeSelectedWomenBelts.length) url.searchParams.set("sizeIds64", sizeSelectedWomenBelts.map((s) => s.id).join(","));
     if (sizeSelectedMenShoes.length) url.searchParams.set("sizeIds38", sizeSelectedMenShoes.map((s) => s.id).join(","));
     if (sizeSelectedRings.length) url.searchParams.set("sizeIds52", sizeSelectedRings.map((s) => s.id).join(","));
     if (sizeSelectedAdultHats.length) url.searchParams.set("sizeIds60", sizeSelectedAdultHats.map((s) => s.id).join(","));
@@ -380,6 +405,9 @@ export default function App() {
       if (brandSelected.length) url.searchParams.set("brandIds", brandSelected.map((b) => b.id).join(","));
       if (sizeSelectedWomen.length) url.searchParams.set("sizeIds4", sizeSelectedWomen.map((s) => s.id).join(","));
       if (sizeSelectedMen.length) url.searchParams.set("sizeIds14", sizeSelectedMen.map((s) => s.id).join(","));
+      if (sizeSelectedWomenShoes.length) url.searchParams.set("sizeIds7", sizeSelectedWomenShoes.map((s) => s.id).join(","));
+      if (sizeSelectedBras.length) url.searchParams.set("sizeIds53", sizeSelectedBras.map((s) => s.id).join(","));
+      if (sizeSelectedWomenBelts.length) url.searchParams.set("sizeIds64", sizeSelectedWomenBelts.map((s) => s.id).join(","));
       if (sizeSelectedMenShoes.length) url.searchParams.set("sizeIds38", sizeSelectedMenShoes.map((s) => s.id).join(","));
       if (sizeSelectedRings.length) url.searchParams.set("sizeIds52", sizeSelectedRings.map((s) => s.id).join(","));
       if (sizeSelectedAdultHats.length) url.searchParams.set("sizeIds60", sizeSelectedAdultHats.map((s) => s.id).join(","));
@@ -430,6 +458,9 @@ export default function App() {
             ...(brandSelected.length ? { brandIds: brandSelected.map((b) => b.id) } : {}),
             ...(sizeSelectedWomen.length ? { sizeIds4: sizeSelectedWomen.map((s) => s.id) } : {}),
             ...(sizeSelectedMen.length ? { sizeIds14: sizeSelectedMen.map((s) => s.id) } : {}),
+            ...(sizeSelectedWomenShoes.length ? { sizeIds7: sizeSelectedWomenShoes.map((s) => s.id) } : {}),
+            ...(sizeSelectedBras.length ? { sizeIds53: sizeSelectedBras.map((s) => s.id) } : {}),
+            ...(sizeSelectedWomenBelts.length ? { sizeIds64: sizeSelectedWomenBelts.map((s) => s.id) } : {}),
             ...(sizeSelectedMenShoes.length ? { sizeIds38: sizeSelectedMenShoes.map((s) => s.id) } : {}),
             ...(sizeSelectedRings.length ? { sizeIds52: sizeSelectedRings.map((s) => s.id) } : {}),
             ...(sizeSelectedAdultHats.length ? { sizeIds60: sizeSelectedAdultHats.map((s) => s.id) } : {}),
@@ -594,6 +625,9 @@ export default function App() {
     brandSelected,
     statusSelected,
     sizeSelectedWomen,
+    sizeSelectedWomenShoes,
+    sizeSelectedBras,
+    sizeSelectedWomenBelts,
     sizeSelectedMen,
     sizeSelectedMenShoes,
     sizeSelectedRings,
@@ -627,6 +661,9 @@ export default function App() {
         if (statusSelected.length) common.set("statusIds", statusSelected.map((s) => s.id).join(","));
         if (sizeSelectedWomen.length) common.set("sizeIds4", sizeSelectedWomen.map((s) => s.id).join(","));
         if (sizeSelectedMen.length) common.set("sizeIds14", sizeSelectedMen.map((s) => s.id).join(","));
+        if (sizeSelectedWomenShoes.length) common.set("sizeIds7", sizeSelectedWomenShoes.map((s) => s.id).join(","));
+        if (sizeSelectedBras.length) common.set("sizeIds53", sizeSelectedBras.map((s) => s.id).join(","));
+        if (sizeSelectedWomenBelts.length) common.set("sizeIds64", sizeSelectedWomenBelts.map((s) => s.id).join(","));
         if (sizeSelectedMenShoes.length) common.set("sizeIds38", sizeSelectedMenShoes.map((s) => s.id).join(","));
         if (sizeSelectedRings.length) common.set("sizeIds52", sizeSelectedRings.map((s) => s.id).join(","));
         if (sizeSelectedAdultHats.length) common.set("sizeIds60", sizeSelectedAdultHats.map((s) => s.id).join(","));
@@ -656,6 +693,9 @@ export default function App() {
     statusSelected,
     sizeSelectedWomen,
     sizeSelectedMen,
+    sizeSelectedWomenShoes,
+    sizeSelectedBras,
+    sizeSelectedWomenBelts,
     sizeSelectedMenShoes,
     sizeSelectedRings,
     sizeSelectedAdultHats,
@@ -909,6 +949,12 @@ export default function App() {
         setBrandSelected={setBrandSelected as any}
         sizeSelectedWomen={sizeSelectedWomen}
         setSizeSelectedWomen={setSizeSelectedWomen as any}
+        sizeSelectedWomenShoes={sizeSelectedWomenShoes}
+        setSizeSelectedWomenShoes={setSizeSelectedWomenShoes as any}
+        sizeSelectedBras={sizeSelectedBras}
+        setSizeSelectedBras={setSizeSelectedBras as any}
+        sizeSelectedWomenBelts={sizeSelectedWomenBelts}
+        setSizeSelectedWomenBelts={setSizeSelectedWomenBelts as any}
         sizeSelectedMen={sizeSelectedMen}
         setSizeSelectedMen={setSizeSelectedMen as any}
         sizeSelectedMenShoes={sizeSelectedMenShoes}

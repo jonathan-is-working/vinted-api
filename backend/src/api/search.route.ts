@@ -45,6 +45,10 @@ export async function registerSearchRoute(
       return reply.code(502).send({
         error: "BadGateway",
         message: "Upstream request failed",
+        hint:
+          upstreamStatus === 403
+            ? "Vinted blocked this IP/session (403). On VPS/datacenter IPs, set VINTED_PROXY_SERVER or switch to VINTED_SESSION_MODE=static with real cookies."
+            : null,
         upstreamStatus: typeof upstreamStatus === "number" ? upstreamStatus : null
       });
     }

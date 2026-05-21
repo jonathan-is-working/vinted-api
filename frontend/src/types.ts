@@ -76,6 +76,9 @@ export type Alert = {
     materialIds?: number[];
     sizeIds4?: number[];
     sizeIds14?: number[];
+    sizeIds7?: number[];
+    sizeIds53?: number[];
+    sizeIds64?: number[];
     sizeIds38?: number[];
     sizeIds52?: number[];
     sizeIds60?: number[];

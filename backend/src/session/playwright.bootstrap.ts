@@ -37,7 +37,10 @@ export async function bootstrapVintedSessionWithPlaywright(
   const captured: Captured = {};
 
   try {
-    browser = await chromium.launch({ headless: true });
+    browser = await chromium.launch({
+      headless: true,
+      ...(env.VINTED_PROXY_SERVER ? { proxy: { server: env.VINTED_PROXY_SERVER } } : {})
+    });
     context = await browser.newContext({
       locale: env.VINTED_LOCALE
     });

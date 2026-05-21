@@ -2,6 +2,7 @@ import axios, { type AxiosInstance } from "axios";
 import { type Env } from "../config/env.js";
 import { type VintedSessionManager } from "../session/session.manager.js";
 import { RateLimiter } from "./rate_limiter.js";
+import { HttpsProxyAgent } from "https-proxy-agent";
 import {
   VintedCatalogItemsResponseSchema,
   VintedCatalogFiltersResponseSchema,
@@ -31,6 +32,9 @@ export type VintedSearchParams = {
   // Grouped sizes as used by Vinted web UI filters.
   sizeIds4?: number[];
   sizeIds14?: number[];
+  sizeIds7?: number[];
+  sizeIds53?: number[];
+  sizeIds64?: number[];
   sizeIds38?: number[];
   sizeIds52?: number[];
   sizeIds60?: number[];
@@ -54,9 +58,13 @@ export class VintedClient {
     private readonly env: Env,
     private readonly sessions: VintedSessionManager
   ) {
+    const proxyAgent = env.VINTED_PROXY_SERVER ? new HttpsProxyAgent(env.VINTED_PROXY_SERVER) : undefined;
     this.http = axios.create({
       baseURL: "https://www.vinted.fr",
       timeout: 10_000,
+      proxy: false,
+      httpAgent: proxyAgent as any,
+      httpsAgent: proxyAgent as any,
       headers: {
         accept: "application/json",
         locale: env.VINTED_LOCALE
@@ -144,11 +152,20 @@ export class VintedClient {
       if (params.materialIds?.length) qp.set("material_ids", params.materialIds.join(","));
 
       // Grouped size filters (e.g. size_ids_4[]=2&size_ids_14[]=206)
+      if (params.sizeIds7?.length) {
+        for (const id of params.sizeIds7) qp.append("size_ids_7[]", String(id));
+      }
       if (params.sizeIds4?.length) {
         for (const id of params.sizeIds4) qp.append("size_ids_4[]", String(id));
       }
       if (params.sizeIds14?.length) {
         for (const id of params.sizeIds14) qp.append("size_ids_14[]", String(id));
+      }
+      if (params.sizeIds53?.length) {
+        for (const id of params.sizeIds53) qp.append("size_ids_53[]", String(id));
+      }
+      if (params.sizeIds64?.length) {
+        for (const id of params.sizeIds64) qp.append("size_ids_64[]", String(id));
       }
       if (params.sizeIds38?.length) {
         for (const id of params.sizeIds38) qp.append("size_ids_38[]", String(id));

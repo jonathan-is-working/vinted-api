@@ -5,6 +5,9 @@ import {
   SIZE_IDS_14_TO_TITLE,
   SIZE_IDS_38_TO_TITLE,
   SIZE_IDS_4_TO_TITLE,
+  SIZE_IDS_53_TO_TITLE,
+  SIZE_IDS_64_TO_TITLE,
+  SIZE_IDS_7_TO_TITLE,
   SIZE_IDS_52_TO_TITLE,
   SIZE_IDS_60_TO_TITLE,
   SIZE_IDS_61_TO_TITLE,
@@ -100,6 +103,24 @@ export class SearchService {
       if (input.sizeIds14?.length) {
         for (const id of input.sizeIds14) {
           const t = SIZE_IDS_14_TO_TITLE[id];
+          if (t) set.add(t);
+        }
+      }
+      if (input.sizeIds7?.length) {
+        for (const id of input.sizeIds7) {
+          const t = SIZE_IDS_7_TO_TITLE[id];
+          if (t) set.add(t);
+        }
+      }
+      if (input.sizeIds53?.length) {
+        for (const id of input.sizeIds53) {
+          const t = SIZE_IDS_53_TO_TITLE[id];
+          if (t) set.add(t);
+        }
+      }
+      if (input.sizeIds64?.length) {
+        for (const id of input.sizeIds64) {
+          const t = SIZE_IDS_64_TO_TITLE[id];
           if (t) set.add(t);
         }
       }
@@ -203,8 +224,11 @@ export class SearchService {
           catalogIds: input.catalogIds,
           brandIds: input.brandIds,
           sizeIds: input.sizeIds,
+          sizeIds7: input.sizeIds7,
           sizeIds4: input.sizeIds4,
           sizeIds14: input.sizeIds14,
+          sizeIds53: input.sizeIds53,
+          sizeIds64: input.sizeIds64,
           sizeIds38: input.sizeIds38,
           sizeIds52: input.sizeIds52,
           sizeIds60: input.sizeIds60,
@@ -258,8 +282,11 @@ export class SearchService {
       catalogIds: input.catalogIds,
       brandIds: input.brandIds,
       sizeIds: input.sizeIds,
+      sizeIds7: input.sizeIds7,
       sizeIds4: input.sizeIds4,
       sizeIds14: input.sizeIds14,
+      sizeIds53: input.sizeIds53,
+      sizeIds64: input.sizeIds64,
       sizeIds38: input.sizeIds38,
       sizeIds52: input.sizeIds52,
       sizeIds60: input.sizeIds60,

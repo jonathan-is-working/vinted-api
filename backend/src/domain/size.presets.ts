@@ -33,6 +33,46 @@ export const SIZE_IDS_14_TO_TITLE: Record<number, string> = {
   213: "Taille unique"
 };
 
+export const SIZE_IDS_7_TO_TITLE: Record<number, string> = {
+  1364: "34",
+  1580: "34.5",
+  55: "35",
+  1195: "35.5",
+  56: "36",
+  1196: "36.5",
+  57: "37",
+  1197: "37.5",
+  58: "38",
+  1198: "38.5",
+  59: "39",
+  1199: "39.5",
+  60: "40",
+  1200: "40.5",
+  61: "41",
+  1201: "41.5",
+  62: "42",
+  1579: "42.5",
+  63: "43",
+  1573: "43.5",
+  1574: "44",
+  1575: "44.5",
+  1576: "45",
+  1578: "46",
+  94: "Taille unique",
+  99: "Autre"
+};
+
+export const SIZE_IDS_53_TO_TITLE: Record<number, string> = {
+  1667: "75D",
+  1262: "90D",
+  1395: "XS",
+  1396: "S"
+};
+
+export const SIZE_IDS_64_TO_TITLE: Record<number, string> = {
+  1582: "Ajustable"
+};
+
 export const SIZE_IDS_38_TO_TITLE: Record<number, string> = {
   776: "38",
   777: "38,5",

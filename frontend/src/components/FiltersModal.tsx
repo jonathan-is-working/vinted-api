@@ -176,6 +176,12 @@ export function FiltersModal(props: {
 
   sizeSelectedWomen: CatalogOption[];
   setSizeSelectedWomen: (fn: (prev: CatalogOption[]) => CatalogOption[]) => void;
+  sizeSelectedWomenShoes: CatalogOption[];
+  setSizeSelectedWomenShoes: (fn: (prev: CatalogOption[]) => CatalogOption[]) => void;
+  sizeSelectedBras: CatalogOption[];
+  setSizeSelectedBras: (fn: (prev: CatalogOption[]) => CatalogOption[]) => void;
+  sizeSelectedWomenBelts: CatalogOption[];
+  setSizeSelectedWomenBelts: (fn: (prev: CatalogOption[]) => CatalogOption[]) => void;
   sizeSelectedMen: CatalogOption[];
   setSizeSelectedMen: (fn: (prev: CatalogOption[]) => CatalogOption[]) => void;
   sizeSelectedMenShoes: CatalogOption[];
@@ -219,6 +225,9 @@ export function FiltersModal(props: {
 
   const allSizesCount =
     props.sizeSelectedWomen.length +
+    props.sizeSelectedWomenShoes.length +
+    props.sizeSelectedBras.length +
+    props.sizeSelectedWomenBelts.length +
     props.sizeSelectedMen.length +
     props.sizeSelectedMenShoes.length +
     props.sizeSelectedRings.length +
@@ -369,6 +378,9 @@ export function FiltersModal(props: {
                   <SelectedChips
                     values={[
                       ...props.sizeSelectedWomen,
+                      ...props.sizeSelectedWomenShoes,
+                      ...props.sizeSelectedBras,
+                      ...props.sizeSelectedWomenBelts,
                       ...props.sizeSelectedMen,
                       ...props.sizeSelectedMenShoes,
                       ...props.sizeSelectedRings,
@@ -383,6 +395,9 @@ export function FiltersModal(props: {
                     ]}
                     onRemove={(id) => {
                       props.setSizeSelectedWomen((prev) => prev.filter((x) => x.id !== id));
+                      props.setSizeSelectedWomenShoes((prev) => prev.filter((x) => x.id !== id));
+                      props.setSizeSelectedBras((prev) => prev.filter((x) => x.id !== id));
+                      props.setSizeSelectedWomenBelts((prev) => prev.filter((x) => x.id !== id));
                       props.setSizeSelectedMen((prev) => prev.filter((x) => x.id !== id));
                       props.setSizeSelectedMenShoes((prev) => prev.filter((x) => x.id !== id));
                       props.setSizeSelectedRings((prev) => prev.filter((x) => x.id !== id));
@@ -405,6 +420,42 @@ export function FiltersModal(props: {
                       options={SIZE_PRESETS.women_clothing.options}
                       selected={props.sizeSelectedWomen}
                       onToggle={(opt) => props.setSizeSelectedWomen((prev) => togglePick(prev, opt))}
+                      emptyText="—"
+                    />
+                  </div>
+
+                  <div className="grid gap-2">
+                    <div className="text-[10px] font-bold uppercase tracking-wider text-slate-500 ml-1">
+                      Femme (chaussures)
+                    </div>
+                    <FacetList
+                      options={SIZE_PRESETS.women_shoes.options}
+                      selected={props.sizeSelectedWomenShoes}
+                      onToggle={(opt) => props.setSizeSelectedWomenShoes((prev) => togglePick(prev, opt))}
+                      emptyText="—"
+                    />
+                  </div>
+
+                  <div className="grid gap-2">
+                    <div className="text-[10px] font-bold uppercase tracking-wider text-slate-500 ml-1">
+                      Soutiens-gorge
+                    </div>
+                    <FacetList
+                      options={SIZE_PRESETS.bras.options}
+                      selected={props.sizeSelectedBras}
+                      onToggle={(opt) => props.setSizeSelectedBras((prev) => togglePick(prev, opt))}
+                      emptyText="—"
+                    />
+                  </div>
+
+                  <div className="grid gap-2">
+                    <div className="text-[10px] font-bold uppercase tracking-wider text-slate-500 ml-1">
+                      Ceintures femme
+                    </div>
+                    <FacetList
+                      options={SIZE_PRESETS.women_belts.options}
+                      selected={props.sizeSelectedWomenBelts}
+                      onToggle={(opt) => props.setSizeSelectedWomenBelts((prev) => togglePick(prev, opt))}
                       emptyText="—"
                     />
                   </div>
