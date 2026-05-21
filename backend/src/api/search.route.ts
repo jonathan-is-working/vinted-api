@@ -47,7 +47,7 @@ export async function registerSearchRoute(
         message: "Upstream request failed",
         hint:
           upstreamStatus === 403
-            ? "Vinted blocked this IP/session (403). On VPS/datacenter IPs, set VINTED_PROXY_SERVER or switch to VINTED_SESSION_MODE=static with real cookies."
+            ? "Vinted blocked this IP/session (403). On VPS/datacenter IPs, you usually need a residential IP (home server) or valid cookies via VINTED_SESSION_MODE=static."
             : null,
         upstreamStatus: typeof upstreamStatus === "number" ? upstreamStatus : null
       });

@@ -20,9 +20,6 @@ const EnvSchema = z.object({
   VINTED_ACCEPT_LANGUAGE: z
     .string()
     .default("fr-FR,fr;q=0.9,en-US;q=0.8,en;q=0.7"),
-  // Optional HTTP(S) proxy (recommended on VPS/datacenter IPs that Vinted blocks).
-  // Example: http://user:pass@host:port
-  VINTED_PROXY_SERVER: z.string().url().optional(),
   // If you provide these, the proxy will use them as a fallback.
   VINTED_ANON_ID: z.string().optional(),
   VINTED_CSRF_TOKEN: z.string().optional(),

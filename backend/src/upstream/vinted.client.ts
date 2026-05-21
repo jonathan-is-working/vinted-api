@@ -2,7 +2,6 @@ import axios, { type AxiosInstance } from "axios";
 import { type Env } from "../config/env.js";
 import { type VintedSessionManager } from "../session/session.manager.js";
 import { RateLimiter } from "./rate_limiter.js";
-import { HttpsProxyAgent } from "https-proxy-agent";
 import {
   VintedCatalogItemsResponseSchema,
   VintedCatalogFiltersResponseSchema,
@@ -58,13 +57,9 @@ export class VintedClient {
     private readonly env: Env,
     private readonly sessions: VintedSessionManager
   ) {
-    const proxyAgent = env.VINTED_PROXY_SERVER ? new HttpsProxyAgent(env.VINTED_PROXY_SERVER) : undefined;
     this.http = axios.create({
       baseURL: "https://www.vinted.fr",
       timeout: 10_000,
-      proxy: false,
-      httpAgent: proxyAgent as any,
-      httpsAgent: proxyAgent as any,
       headers: {
         accept: "application/json",
         locale: env.VINTED_LOCALE
