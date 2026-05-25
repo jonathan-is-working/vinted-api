@@ -202,20 +202,22 @@ export class SearchService {
           matchOpt(input.condition, i.condition)
       );
 
-    // If we have strict grouped size filters, Vinted sometimes returns fewer-than-requested items
-    // (or leaks items with missing/odd size fields). To keep UX stable, we over-fetch pages and
-    // fill the requested perPage count with locally-validated items.
+    // If we have strict grouped size filters, Vinted can return fewer-than-requested items
+    // (or leak items with missing/odd size fields). To keep pagination stable, we over-fetch
+    // from the start and slice by filtered offset for the requested page.
     const fillToPerPage = opts?.fillToPerPage ?? true;
     const needsFill = fillToPerPage && allowedSizeTitles != null;
     if (needsFill) {
       const fetchPerPage = Math.max(input.perPage, this.env.VINTED_PER_PAGE);
-      const maxPagesToScan = 6;
+      const maxPagesToScan = 20;
+      const startIndex = Math.max(0, (input.page - 1) * input.perPage);
+      const endExclusive = startIndex + input.perPage;
       const collected: Array<ReturnType<typeof mapItems>[number]> = [];
 
-      for (let i = 0; i < maxPagesToScan && collected.length < input.perPage; i++) {
+      for (let i = 0; i < maxPagesToScan && collected.length < endExclusive; i++) {
         const upstream = await this.vinted.searchCatalogItems({
           searchText: input.q,
-          page: input.page + i,
+          page: 1 + i,
           perPage: fetchPerPage,
           order,
           priceFrom,
@@ -249,11 +251,11 @@ export class SearchService {
 
         // Stop early if upstream is exhausted.
         const totalPages = upstream.pagination?.total_pages;
-        if (typeof totalPages === "number" && totalPages > 0 && input.page + i >= totalPages) break;
+        if (typeof totalPages === "number" && totalPages > 0 && 1 + i >= totalPages) break;
         if (!upstream.items.length) break;
       }
 
-      const pageItems = collected.slice(0, input.perPage);
+      const pageItems = collected.slice(startIndex, endExclusive);
       const facets = {
         brands: facetCounts(pageItems.map((i) => i.brand)),
         sizes: facetCounts(pageItems.map((i) => i.size)),

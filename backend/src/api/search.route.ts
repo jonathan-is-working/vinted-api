@@ -9,12 +9,12 @@ export async function registerSearchRoute(
 ) {
   app.get("/search", async (req, reply) => {
     const WithOptsSchema = SearchQuerySchema.extend({
-      // For raw search endpoint, default to max responsiveness (1 upstream call).
-      // If you want stable page sizes while using strict size filters, pass fill=1.
+      // Fill pages by default so UI gets stable page sizes with strict filters.
+      // Pass fill=0 to force single upstream page fetch.
       fill: z
         .enum(["0", "1", "true", "false"])
         .optional()
-        .transform((v) => (v == null ? false : v === "1" || v === "true"))
+        .transform((v) => (v == null ? true : v === "1" || v === "true"))
     });
     const parsed = WithOptsSchema.safeParse(req.query);
     if (!parsed.success) {

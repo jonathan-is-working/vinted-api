@@ -392,6 +392,7 @@ export default function App() {
       url.searchParams.set("q", trimmed);
       url.searchParams.set("page", String(nextPage));
       url.searchParams.set("perPage", String(perPage));
+      url.searchParams.set("fill", "1");
       url.searchParams.set("sort", sort);
       url.searchParams.set("currency", currency.trim() || "EUR");
 
