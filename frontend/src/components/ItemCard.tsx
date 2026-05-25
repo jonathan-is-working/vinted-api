@@ -15,7 +15,7 @@ export function ItemCard({ item, layout, hot, selected, onHover, onClick }: Item
     return (
       <button
         className={cx(
-          "group flex flex-col w-full overflow-hidden rounded-3xl border bg-white/60 p-3 text-left transition-all duration-300 backdrop-blur-md",
+          "group flex h-full w-full flex-col overflow-hidden rounded-3xl border bg-white/60 p-3 text-left transition-all duration-300 backdrop-blur-md",
           selected
             ? "border-emerald-400/50 bg-emerald-50/80 shadow-[0_8px_30px_rgb(16,185,129,0.12)] scale-[1.02]"
             : "border-slate-200/50 shadow-sm hover:border-slate-300 hover:bg-white/90 hover:shadow-md hover:-translate-y-1"

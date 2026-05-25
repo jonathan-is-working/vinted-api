@@ -886,13 +886,13 @@ export default function App() {
               <div
                 className={
                   layout === "cards"
-                    ? "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3 gap-5"
+                    ? "grid grid-cols-1 gap-5 auto-rows-fr sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3"
                     : "grid gap-3 max-w-5xl mx-auto"
                 }
               >
-                {items.map((it) => (
+                {items.map((it, index) => (
                   <ItemCard
-                    key={it.id}
+                    key={`${it.id}-${index}`}
                     item={it}
                     layout={layout}
                     hot={activeView === "live"}
