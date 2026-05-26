@@ -282,40 +282,40 @@ export class CatalogService {
     if (this.categoriesInFlight) return this.categoriesInFlight;
 
     const run = async (): Promise<{ categories: CatalogCategory[]; raw: unknown }> => {
-    const now = Date.now();
-    if (now < this.categoriesBlockedUntil) {
-      if (this.categoriesCache) return { categories: this.categoriesCache.categories, raw: this.categoriesCache.raw };
-      return { categories: [], raw: { degraded: true, reason: "upstream_temporarily_blocked" } };
-    }
-
-    try {
-      const raw = await this.vinted.getFacetedCategories({
-        currency: input.currency,
-        catalogIds: input.catalogIds,
-        sizeIds: input.sizeIds,
-        brandIds: input.brandIds,
-        statusIds: input.statusIds,
-        colorIds: input.colorIds,
-        materialIds: input.materialIds
-      });
-
-      const categories = tryNormalizeCategories(raw);
-      this.categoriesCache = { at: now, categories, raw };
-      return { categories, raw };
-    } catch (err) {
-      const upstreamStatus =
-        err && typeof err === "object" && "upstreamStatus" in err
-          ? (err as any).upstreamStatus
-          : undefined;
-
-      if (upstreamStatus === 401 || upstreamStatus === 403) {
-        this.categoriesBlockedUntil = now + 5 * 60_000;
+      const now = Date.now();
+      if (now < this.categoriesBlockedUntil) {
         if (this.categoriesCache) return { categories: this.categoriesCache.categories, raw: this.categoriesCache.raw };
-        return { categories: [], raw: { degraded: true, reason: "cloudflare_blocked" } };
+        return { categories: [], raw: { degraded: true, reason: "upstream_temporarily_blocked" } };
       }
 
-      throw err;
-    }
+      try {
+        const raw = await this.vinted.getFacetedCategories({
+          currency: input.currency,
+          catalogIds: input.catalogIds,
+          sizeIds: input.sizeIds,
+          brandIds: input.brandIds,
+          statusIds: input.statusIds,
+          colorIds: input.colorIds,
+          materialIds: input.materialIds
+        });
+
+        const categories = tryNormalizeCategories(raw);
+        this.categoriesCache = { at: now, categories, raw };
+        return { categories, raw };
+      } catch (err) {
+        const upstreamStatus =
+          err && typeof err === "object" && "upstreamStatus" in err
+            ? (err as any).upstreamStatus
+            : undefined;
+
+        if (upstreamStatus === 401 || upstreamStatus === 403) {
+          this.categoriesBlockedUntil = now + 5 * 60_000;
+          if (this.categoriesCache) return { categories: this.categoriesCache.categories, raw: this.categoriesCache.raw };
+          return { categories: [], raw: { degraded: true, reason: "cloudflare_blocked" } };
+        }
+
+        throw err;
+      }
     };
 
     this.categoriesInFlight = run().finally(() => {
