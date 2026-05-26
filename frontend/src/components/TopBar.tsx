@@ -33,6 +33,7 @@ interface TopBarProps {
   setPerPage: (v: number) => void;
   canNext: boolean;
   openFilters: () => void;
+  importVintedUrl: () => void;
 }
 
 export function TopBar({
@@ -42,6 +43,7 @@ export function TopBar({
   refreshNow, lastUpdatedAt,
   selectedAlertId, armedCount, openArmedFeed, streamItemsLength, activeView, setActiveView,
   activeFiltersLabel, layout, setLayout, data, page, perPage, setPerPage, canNext, openFilters
+  , importVintedUrl
 }: TopBarProps) {
   const updatedLabel = lastUpdatedAt
     ? new Date(lastUpdatedAt).toLocaleTimeString(undefined, {
@@ -105,6 +107,14 @@ export function TopBar({
           title="Open filters"
         >
           <Icon name="tune" /> Filters
+        </button>
+
+        <button
+          className="flex items-center gap-2 rounded-2xl bg-white border border-slate-200/60 px-5 py-3 text-sm font-bold text-slate-700 shadow-sm hover:bg-slate-50 transition-all"
+          onClick={importVintedUrl}
+          title="Import filters from a Vinted URL"
+        >
+          <Icon name="travel_explore" /> Import URL
         </button>
         
         <button

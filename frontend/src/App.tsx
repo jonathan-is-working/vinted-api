@@ -219,6 +219,74 @@ export default function App() {
     setPriceMax(alert.query?.priceMax != null ? String((alert.query.priceMax / 100).toFixed(2)) : "");
   }
 
+  function importFiltersFromVintedUrl() {
+    const raw = window.prompt("Paste a Vinted catalog URL");
+    if (!raw) return;
+    let parsedUrl: URL;
+    try {
+      parsedUrl = new URL(raw.trim());
+    } catch {
+      setError("Invalid URL");
+      return;
+    }
+
+    const params = parsedUrl.searchParams;
+    const getIds = (key: string) =>
+      [
+        ...params.getAll(key),
+        ...params.getAll(`${key}[]`)
+      ]
+        .flatMap((v) => v.split(","))
+        .map((v) => Number(v.trim()))
+        .filter((n) => Number.isFinite(n) && n > 0);
+
+    const sizeIds = Array.from(new Set(getIds("size_ids")));
+    const statusIds = Array.from(new Set(getIds("status_ids")));
+    const brandIds = Array.from(new Set(getIds("brand_ids")));
+    const catalogIds = Array.from(new Set(getIds("catalog")));
+
+    const toOptions = (ids: number[], dict: Record<number, string>) =>
+      ids
+        .filter((id) => dict[id] != null)
+        .map((id) => ({ id, title: dict[id] ?? String(id) }));
+
+    setQ(params.get("search_text") ?? params.get("q") ?? "");
+    setCurrency(params.get("currency") ?? "EUR");
+
+    const order = params.get("order");
+    if (order === "newest_first") setSort("newest");
+    else if (order === "price_low_to_high") setSort("price_asc");
+    else if (order === "price_high_to_low") setSort("price_desc");
+    else setSort("relevance");
+
+    const max = params.get("price_to");
+    const min = params.get("price_from");
+    setPriceMin(min ? String(min) : "");
+    setPriceMax(max ? String(max) : "");
+
+    setCategoryId(catalogIds[0] ? String(catalogIds[0]) : "");
+    setBrandSelected(brandIds.map((id) => ({ id, title: `#${id}` })));
+    setStatusSelected(statusIds.map((id) => ({ id, title: `#${id}` })));
+
+    setSizeSelectedWomen(toOptions(sizeIds, SIZE_PRESETS.women_clothing.options.reduce((a, o) => ({ ...a, [o.id]: o.title }), {} as Record<number, string>)));
+    setSizeSelectedWomenShoes(toOptions(sizeIds, SIZE_PRESETS.women_shoes.options.reduce((a, o) => ({ ...a, [o.id]: o.title }), {} as Record<number, string>)));
+    setSizeSelectedBras(toOptions(sizeIds, SIZE_PRESETS.bras.options.reduce((a, o) => ({ ...a, [o.id]: o.title }), {} as Record<number, string>)));
+    setSizeSelectedWomenBelts(toOptions(sizeIds, SIZE_PRESETS.women_belts.options.reduce((a, o) => ({ ...a, [o.id]: o.title }), {} as Record<number, string>)));
+    setSizeSelectedMen(toOptions(sizeIds, SIZE_PRESETS.men_clothing.options.reduce((a, o) => ({ ...a, [o.id]: o.title }), {} as Record<number, string>)));
+    setSizeSelectedMenShoes(toOptions(sizeIds, SIZE_PRESETS.men_shoes.options.reduce((a, o) => ({ ...a, [o.id]: o.title }), {} as Record<number, string>)));
+    setSizeSelectedRings(toOptions(sizeIds, SIZE_PRESETS.rings.options.reduce((a, o) => ({ ...a, [o.id]: o.title }), {} as Record<number, string>)));
+    setSizeSelectedAdultHats(toOptions(sizeIds, SIZE_PRESETS.adult_hats.options.reduce((a, o) => ({ ...a, [o.id]: o.title }), {} as Record<number, string>)));
+    setSizeSelectedAdultGloves(toOptions(sizeIds, SIZE_PRESETS.adult_gloves.options.reduce((a, o) => ({ ...a, [o.id]: o.title }), {} as Record<number, string>)));
+    setSizeSelectedWatches(toOptions(sizeIds, SIZE_PRESETS.watches.options.reduce((a, o) => ({ ...a, [o.id]: o.title }), {} as Record<number, string>)));
+    setSizeSelectedMenBelts(toOptions(sizeIds, SIZE_PRESETS.men_belts.options.reduce((a, o) => ({ ...a, [o.id]: o.title }), {} as Record<number, string>)));
+    setSizeSelectedMenSocks(toOptions(sizeIds, SIZE_PRESETS.men_socks.options.reduce((a, o) => ({ ...a, [o.id]: o.title }), {} as Record<number, string>)));
+    setSizeSelectedMenShirts(toOptions(sizeIds, SIZE_PRESETS.men_shirts.options.reduce((a, o) => ({ ...a, [o.id]: o.title }), {} as Record<number, string>)));
+    setSizeSelectedMenSuitJackets(toOptions(sizeIds, SIZE_PRESETS.men_suit_jackets.options.reduce((a, o) => ({ ...a, [o.id]: o.title }), {} as Record<number, string>)));
+    setSizeSelectedMenPants(toOptions(sizeIds, SIZE_PRESETS.men_pants.options.reduce((a, o) => ({ ...a, [o.id]: o.title }), {} as Record<number, string>)));
+
+    setFiltersOpen(true);
+  }
+
   async function saveEditingAlert() {
     if (!editingAlertId) return;
     const trimmed = q.trim();
@@ -853,6 +921,7 @@ export default function App() {
           setPerPage={setPerPage}
           canNext={canNext}
           openFilters={() => setFiltersOpen(true)}
+          importVintedUrl={importFiltersFromVintedUrl}
         />
 
         <main className="flex-1 overflow-y-auto p-6 custom-scrollbar">
