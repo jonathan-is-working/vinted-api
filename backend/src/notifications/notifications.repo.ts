@@ -33,6 +33,12 @@ export class NotificationsRepo {
       CREATE INDEX IF NOT EXISTS notifications_created_at
         ON notifications(created_at DESC);
 
+      CREATE TABLE IF NOT EXISTS telegram_notified_items (
+        item_id BIGINT PRIMARY KEY,
+        notification_id TEXT NULL REFERENCES notifications(id) ON DELETE SET NULL,
+        created_at BIGINT NOT NULL
+      );
+
       -- Back-compat: older installs won't have the telegram column
       ALTER TABLE notifications ADD COLUMN IF NOT EXISTS telegram_message_id BIGINT NULL;
     `);
@@ -152,6 +158,16 @@ export class NotificationsRepo {
       `UPDATE notifications SET telegram_message_id = $2 WHERE id = $1`,
       [notificationId, messageId]
     );
+  }
+
+  async claimTelegramItem(itemId: number, notificationId?: string): Promise<boolean> {
+    const res = await this.pool.query(
+      `INSERT INTO telegram_notified_items (item_id, notification_id, created_at)
+       VALUES ($1, $2, $3)
+       ON CONFLICT (item_id) DO NOTHING`,
+      [itemId, notificationId ?? null, Date.now()]
+    );
+    return (res.rowCount ?? 0) > 0;
   }
 
   async listTelegramMessageIds(limit: number): Promise<number[]> {

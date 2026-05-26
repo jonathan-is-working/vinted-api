@@ -132,7 +132,7 @@ export class LiveSearchService {
           itemId: it.id,
           item: it
         });
-        if (createdId && this.notifier) {
+        if (createdId && this.notifier && (await this.notifications!.claimTelegramItem(it.id, createdId))) {
           try {
             void this.notifier
               .notifyNewItem({ sourceType: "query", sourceKey: feed.key, item: it })

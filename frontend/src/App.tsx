@@ -329,6 +329,8 @@ export default function App() {
   function startLiveFromMonitors(alertIds?: string[]) {
     const url = new URL(`/v1/notifications/stream`, API_BASE_URL);
     url.searchParams.set("sourceType", "alert");
+    const ids = (alertIds ?? []).filter(Boolean);
+    if (ids.length) url.searchParams.set("sourceKeys", ids.join(","));
     connectStream(url);
   }
 
@@ -526,7 +528,7 @@ export default function App() {
       esRef.current?.close();
       esRef.current = null;
     };
-  }, [selectedAlertId, liveMode]);
+  }, [selectedAlertId, liveMode, armedAlertIds]);
 
   useEffect(() => {
     try {

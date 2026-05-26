@@ -147,7 +147,7 @@ export class AlertsService {
           if (!createdId) continue;
 
           fresh.push(item);
-          if (this.notifier) {
+          if (this.notifier && (await this.notifications.claimTelegramItem(item.id, createdId))) {
             try {
               void this.notifier
                 .notifyNewItem({ sourceType: "alert", sourceKey: alertId, item })
