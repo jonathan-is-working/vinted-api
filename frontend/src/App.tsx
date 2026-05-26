@@ -243,7 +243,10 @@ export default function App() {
     const sizeIds = Array.from(new Set(getIds("size_ids")));
     const statusIds = Array.from(new Set(getIds("status_ids")));
     const brandIds = Array.from(new Set(getIds("brand_ids")));
+    const colorIds = Array.from(new Set(getIds("color_ids")));
+    const materialIds = Array.from(new Set(getIds("material_ids")));
     const catalogIds = Array.from(new Set(getIds("catalog")));
+    const catalogIdsAlt = Array.from(new Set(getIds("catalog_ids")));
 
     const toOptions = (ids: number[], dict: Record<number, string>) =>
       ids
@@ -264,9 +267,17 @@ export default function App() {
     setPriceMin(min ? String(min) : "");
     setPriceMax(max ? String(max) : "");
 
-    setCategoryId(catalogIds[0] ? String(catalogIds[0]) : "");
-    setBrandSelected(brandIds.map((id) => ({ id, title: `#${id}` })));
-    setStatusSelected(statusIds.map((id) => ({ id, title: `#${id}` })));
+    const byId = (arr: Array<{ id: number; title: string }>) => new Map(arr.map((o) => [o.id, o.title]));
+    const brandMap = byId(facetBrands);
+    const statusMap = byId(statusOptions.length ? statusOptions : facetStatuses);
+    const colorMap = byId(facetColors);
+    const materialMap = byId(facetMaterials);
+
+    setCategoryId((catalogIds[0] ?? catalogIdsAlt[0]) ? String(catalogIds[0] ?? catalogIdsAlt[0]) : "");
+    setBrandSelected(brandIds.map((id) => ({ id, title: brandMap.get(id) ?? `#${id}` })));
+    setStatusSelected(statusIds.map((id) => ({ id, title: statusMap.get(id) ?? `#${id}` })));
+    setColorSelected(colorIds.map((id) => ({ id, title: colorMap.get(id) ?? `#${id}` })));
+    setMaterialSelected(materialIds.map((id) => ({ id, title: materialMap.get(id) ?? `#${id}` })));
 
     setSizeSelectedWomen(toOptions(sizeIds, SIZE_PRESETS.women_clothing.options.reduce((a, o) => ({ ...a, [o.id]: o.title }), {} as Record<number, string>)));
     setSizeSelectedWomenShoes(toOptions(sizeIds, SIZE_PRESETS.women_shoes.options.reduce((a, o) => ({ ...a, [o.id]: o.title }), {} as Record<number, string>)));
