@@ -245,8 +245,13 @@ export default function App() {
     const brandIds = Array.from(new Set(getIds("brand_ids")));
     const colorIds = Array.from(new Set(getIds("color_ids")));
     const materialIds = Array.from(new Set(getIds("material_ids")));
-    const catalogIds = Array.from(new Set(getIds("catalog")));
-    const catalogIdsAlt = Array.from(new Set(getIds("catalog_ids")));
+    const catalogIds = Array.from(
+      new Set([
+        ...getIds("catalog"),
+        ...getIds("catalog_ids"),
+        ...getIds("catalog_id")
+      ])
+    );
 
     const toOptions = (ids: number[], dict: Record<number, string>) =>
       ids
@@ -273,7 +278,7 @@ export default function App() {
     const colorMap = byId(facetColors);
     const materialMap = byId(facetMaterials);
 
-    setCategoryId((catalogIds[0] ?? catalogIdsAlt[0]) ? String(catalogIds[0] ?? catalogIdsAlt[0]) : "");
+    setCategoryId(catalogIds[0] ? String(catalogIds[0]) : "");
     setBrandSelected(brandIds.map((id) => ({ id, title: brandMap.get(id) ?? `#${id}` })));
     setStatusSelected(statusIds.map((id) => ({ id, title: statusMap.get(id) ?? `#${id}` })));
     setColorSelected(colorIds.map((id) => ({ id, title: colorMap.get(id) ?? `#${id}` })));
