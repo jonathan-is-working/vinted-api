@@ -155,6 +155,10 @@ function tryNormalizeOptionsFromSearch(raw: any): CatalogOption[] {
 }
 
 export class CatalogService {
+  private categoriesCache: { at: number; categories: CatalogCategory[]; raw: unknown } | null = null;
+  private categoriesBlockedUntil = 0;
+  private categoriesInFlight: Promise<{ categories: CatalogCategory[]; raw: unknown }> | null = null;
+
   constructor(
     private readonly vinted: VintedClient,
     private readonly env: Env
@@ -275,17 +279,48 @@ export class CatalogService {
     colorIds?: number[];
     materialIds?: number[];
   }): Promise<{ categories: CatalogCategory[]; raw: unknown }> {
-    const raw = await this.vinted.getFacetedCategories({
-      currency: input.currency,
-      catalogIds: input.catalogIds,
-      sizeIds: input.sizeIds,
-      brandIds: input.brandIds,
-      statusIds: input.statusIds,
-      colorIds: input.colorIds,
-      materialIds: input.materialIds
-    });
+    if (this.categoriesInFlight) return this.categoriesInFlight;
 
-    const categories = tryNormalizeCategories(raw);
-    return { categories, raw };
+    const run = async (): Promise<{ categories: CatalogCategory[]; raw: unknown }> => {
+    const now = Date.now();
+    if (now < this.categoriesBlockedUntil) {
+      if (this.categoriesCache) return { categories: this.categoriesCache.categories, raw: this.categoriesCache.raw };
+      return { categories: [], raw: { degraded: true, reason: "upstream_temporarily_blocked" } };
+    }
+
+    try {
+      const raw = await this.vinted.getFacetedCategories({
+        currency: input.currency,
+        catalogIds: input.catalogIds,
+        sizeIds: input.sizeIds,
+        brandIds: input.brandIds,
+        statusIds: input.statusIds,
+        colorIds: input.colorIds,
+        materialIds: input.materialIds
+      });
+
+      const categories = tryNormalizeCategories(raw);
+      this.categoriesCache = { at: now, categories, raw };
+      return { categories, raw };
+    } catch (err) {
+      const upstreamStatus =
+        err && typeof err === "object" && "upstreamStatus" in err
+          ? (err as any).upstreamStatus
+          : undefined;
+
+      if (upstreamStatus === 401 || upstreamStatus === 403) {
+        this.categoriesBlockedUntil = now + 5 * 60_000;
+        if (this.categoriesCache) return { categories: this.categoriesCache.categories, raw: this.categoriesCache.raw };
+        return { categories: [], raw: { degraded: true, reason: "cloudflare_blocked" } };
+      }
+
+      throw err;
+    }
+    };
+
+    this.categoriesInFlight = run().finally(() => {
+      this.categoriesInFlight = null;
+    });
+    return this.categoriesInFlight;
   }
 }
