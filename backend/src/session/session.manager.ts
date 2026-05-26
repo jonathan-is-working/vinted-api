@@ -38,6 +38,36 @@ export class VintedSessionManager {
     };
   }
 
+  getDebugInfo(): {
+    mode: Env["VINTED_SESSION_MODE"];
+    hasSession: boolean;
+    headerKeys: string[];
+    hasAuthHeader: boolean;
+    hasCsrfHeader: boolean;
+    hasAnonHeader: boolean;
+    hasCookieHeader: boolean;
+    cookieKeys: string[];
+  } {
+    const headers = this.session?.headers ?? {};
+    const cookie = headers["cookie"] ?? "";
+    const cookieKeys = cookie
+      .split(";")
+      .map((chunk) => chunk.trim())
+      .map((chunk) => chunk.split("=")[0]?.trim())
+      .filter((k): k is string => !!k);
+
+    return {
+      mode: this.env.VINTED_SESSION_MODE,
+      hasSession: !!this.session,
+      headerKeys: Object.keys(headers).sort(),
+      hasAuthHeader: typeof headers["authorization"] === "string" && headers["authorization"].length > 0,
+      hasCsrfHeader: typeof headers["x-csrf-token"] === "string" && headers["x-csrf-token"].length > 0,
+      hasAnonHeader: typeof headers["x-anon-id"] === "string" && headers["x-anon-id"].length > 0,
+      hasCookieHeader: typeof headers["cookie"] === "string" && headers["cookie"].length > 0,
+      cookieKeys: Array.from(new Set(cookieKeys)).sort()
+    };
+  }
+
   invalidate(): void {
     this.session = null;
   }

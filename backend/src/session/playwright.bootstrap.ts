@@ -11,6 +11,7 @@ type Captured = {
   cookieHeader?: string;
   anonId?: string;
   csrfToken?: string;
+  authorization?: string;
   userAgent?: string;
   acceptLanguage?: string;
   referer?: string;
@@ -52,6 +53,7 @@ export async function bootstrapVintedSessionWithPlaywright(
       const headers = req.headers();
       captured.anonId ||= pickHeader(headers, "x-anon-id");
       captured.csrfToken ||= pickHeader(headers, "x-csrf-token");
+      captured.authorization ||= pickHeader(headers, "authorization");
       captured.userAgent ||= pickHeader(headers, "user-agent");
       captured.acceptLanguage ||= pickHeader(headers, "accept-language");
       captured.referer ||= pickHeader(headers, "referer");
@@ -87,6 +89,7 @@ export async function bootstrapVintedSessionWithPlaywright(
     if (captured.referer) headers["referer"] = captured.referer;
     if (captured.anonId) headers["x-anon-id"] = captured.anonId;
     if (captured.csrfToken) headers["x-csrf-token"] = captured.csrfToken;
+    if (captured.authorization) headers["authorization"] = captured.authorization;
     if (captured.cookieHeader) headers["cookie"] = captured.cookieHeader;
 
     return {

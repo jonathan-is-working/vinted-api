@@ -7,6 +7,7 @@ export async function registerUpstreamStatusRoutes(
 ) {
   app.get("/status/upstream", async () => {
     const meta = deps.sessions.getMeta();
+    const debug = deps.sessions.getDebugInfo();
     return {
       session: {
         mode: meta.mode,
@@ -16,7 +17,8 @@ export async function registerUpstreamStatusRoutes(
         lastRefreshReason: meta.lastRefreshReason,
         lastErrorAt: meta.lastErrorAt,
         lastError: meta.lastError
-      }
+      },
+      debug
     };
   });
 
@@ -25,4 +27,3 @@ export async function registerUpstreamStatusRoutes(
     return { ok: true };
   });
 }
-
