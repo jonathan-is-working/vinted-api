@@ -39,6 +39,23 @@ export async function registerCatalogRoutes(
   app: FastifyInstance,
   deps: { catalogService: CatalogService }
 ) {
+  const sendUpstreamError = (reply: any, req: any, err: unknown) => {
+    const upstreamStatus =
+      err && typeof err === "object" && "upstreamStatus" in err
+        ? (err as any).upstreamStatus
+        : undefined;
+    req.log.error({ err, upstreamStatus }, "Catalog upstream request failed");
+    return reply.code(502).send({
+      error: "BadGateway",
+      message: "Upstream request failed",
+      hint:
+        upstreamStatus === 403
+          ? "Vinted blocked this IP/session (Cloudflare challenge). Prefer residential IP and/or valid cookies via VINTED_SESSION_MODE=static."
+          : null,
+      upstreamStatus: typeof upstreamStatus === "number" ? upstreamStatus : null
+    });
+  };
+
   app.get("/catalog/filters", async (req, reply) => {
     const parsed = CatalogFiltersQuerySchema.safeParse(req.query);
     if (!parsed.success) {
@@ -49,8 +66,12 @@ export async function registerCatalogRoutes(
       });
     }
 
-    const data = await deps.catalogService.getFilters(parsed.data);
-    return reply.send(CatalogFiltersResponseSchema.parse(data));
+    try {
+      const data = await deps.catalogService.getFilters(parsed.data);
+      return reply.send(CatalogFiltersResponseSchema.parse(data));
+    } catch (err) {
+      return sendUpstreamError(reply, req, err);
+    }
   });
 
   app.get("/catalog/categories", async (req, reply) => {
@@ -62,16 +83,20 @@ export async function registerCatalogRoutes(
         issues: parsed.error.issues
       });
     }
-    const data = await deps.catalogService.getFacetedCategories({
-      currency: parsed.data.currency,
-      catalogIds: parsed.data.catalogIds,
-      sizeIds: parsed.data.sizeIds,
-      brandIds: parsed.data.brandIds,
-      statusIds: parsed.data.statusIds,
-      colorIds: parsed.data.colorIds,
-      materialIds: parsed.data.materialIds
-    });
-    return reply.send(data);
+    try {
+      const data = await deps.catalogService.getFacetedCategories({
+        currency: parsed.data.currency,
+        catalogIds: parsed.data.catalogIds,
+        sizeIds: parsed.data.sizeIds,
+        brandIds: parsed.data.brandIds,
+        statusIds: parsed.data.statusIds,
+        colorIds: parsed.data.colorIds,
+        materialIds: parsed.data.materialIds
+      });
+      return reply.send(data);
+    } catch (err) {
+      return sendUpstreamError(reply, req, err);
+    }
   });
 
   const CatalogFacetsQuerySchema = z.object({
@@ -95,18 +120,22 @@ export async function registerCatalogRoutes(
         issues: parsed.error.issues
       });
     }
-    const data = await deps.catalogService.getFilterFacets({
-      filterCode: parsed.data.filterCode,
-      searchText: parsed.data.searchText,
-      currency: parsed.data.currency,
-      catalogIds: parsed.data.catalogIds,
-      sizeIds: parsed.data.sizeIds,
-      brandIds: parsed.data.brandIds,
-      statusIds: parsed.data.statusIds,
-      colorIds: parsed.data.colorIds,
-      materialIds: parsed.data.materialIds
-    });
-    return reply.send(data);
+    try {
+      const data = await deps.catalogService.getFilterFacets({
+        filterCode: parsed.data.filterCode,
+        searchText: parsed.data.searchText,
+        currency: parsed.data.currency,
+        catalogIds: parsed.data.catalogIds,
+        sizeIds: parsed.data.sizeIds,
+        brandIds: parsed.data.brandIds,
+        statusIds: parsed.data.statusIds,
+        colorIds: parsed.data.colorIds,
+        materialIds: parsed.data.materialIds
+      });
+      return reply.send(data);
+    } catch (err) {
+      return sendUpstreamError(reply, req, err);
+    }
   });
 
   const CatalogOptionsQuerySchema = z.object({
@@ -130,17 +159,21 @@ export async function registerCatalogRoutes(
         issues: parsed.error.issues
       });
     }
-    const data = await deps.catalogService.searchOptions({
-      code: parsed.data.code,
-      q: parsed.data.q,
-      currency: parsed.data.currency,
-      catalogIds: parsed.data.catalogIds,
-      sizeIds: parsed.data.sizeIds,
-      brandIds: parsed.data.brandIds,
-      statusIds: parsed.data.statusIds,
-      colorIds: parsed.data.colorIds,
-      materialIds: parsed.data.materialIds
-    });
-    return reply.send(data);
+    try {
+      const data = await deps.catalogService.searchOptions({
+        code: parsed.data.code,
+        q: parsed.data.q,
+        currency: parsed.data.currency,
+        catalogIds: parsed.data.catalogIds,
+        sizeIds: parsed.data.sizeIds,
+        brandIds: parsed.data.brandIds,
+        statusIds: parsed.data.statusIds,
+        colorIds: parsed.data.colorIds,
+        materialIds: parsed.data.materialIds
+      });
+      return reply.send(data);
+    } catch (err) {
+      return sendUpstreamError(reply, req, err);
+    }
   });
 }
