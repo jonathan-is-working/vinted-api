@@ -13,14 +13,13 @@ interface TopBarProps {
   runSearch: (page: number) => void;
   loading: boolean;
   createAlertFromQuery: () => void;
-  startLiveFromQuery: () => void;
+  startLiveFeed: () => void;
   liveMode: "saved" | "query" | "monitors";
   setLiveMode: (v: "saved" | "query" | "monitors") => void;
   refreshNow: () => void;
   lastUpdatedAt: number | null;
   selectedAlertId: string | null;
   armedCount: number;
-  openArmedFeed: () => void;
   streamItemsLength: number;
   activeView: "live" | "search";
   setActiveView: (v: "live" | "search") => void;
@@ -39,9 +38,9 @@ interface TopBarProps {
 export function TopBar({
   sidebarOpen, setSidebarOpen,
   inspectorOpen, setInspectorOpen,
-  q, setQ, runSearch, loading, createAlertFromQuery, startLiveFromQuery, liveMode, setLiveMode,
+  q, setQ, runSearch, loading, createAlertFromQuery, startLiveFeed, liveMode, setLiveMode,
   refreshNow, lastUpdatedAt,
-  selectedAlertId, armedCount, openArmedFeed, streamItemsLength, activeView, setActiveView,
+  selectedAlertId, armedCount, streamItemsLength, activeView, setActiveView,
   activeFiltersLabel, layout, setLayout, data, page, perPage, setPerPage, canNext, openFilters
   , importVintedUrl
 }: TopBarProps) {
@@ -69,7 +68,7 @@ export function TopBar({
         <div className="relative flex-1">
           <Icon name="search" className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 text-[20px]" />
           <input
-            className="w-full rounded-2xl border border-slate-200/80 bg-white/80 pl-12 pr-4 py-3 text-sm font-medium text-slate-800 outline-none focus:border-emerald-400 focus:ring-4 focus:ring-emerald-50 transition-all shadow-sm placeholder:text-slate-400 placeholder:font-normal"
+            className="w-full rounded-2xl border border-slate-200/80 bg-white/80 pl-12 pr-4 py-3 text-sm font-medium text-slate-800 outline-none focus:border-blue-400 focus:ring-4 focus:ring-blue-50 transition-all shadow-sm placeholder:text-slate-400 placeholder:font-normal"
             placeholder="Search for amazing deals... (e.g. nike dunk low, vintage levis)"
             value={q}
             onChange={(e) => setQ(e.target.value)}
@@ -118,7 +117,7 @@ export function TopBar({
         </button>
         
         <button
-          className="flex items-center gap-2 rounded-2xl bg-emerald-50 text-emerald-700 border border-emerald-200/50 px-5 py-3 text-sm font-bold shadow-sm hover:bg-emerald-100 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+          className="flex items-center gap-2 rounded-2xl bg-blue-50 text-blue-700 border border-blue-200/50 px-5 py-3 text-sm font-bold shadow-sm hover:bg-blue-100 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
           disabled={!q.trim() || loading}
           onClick={createAlertFromQuery}
           title="Create & arm a live alert for this query"
@@ -129,32 +128,18 @@ export function TopBar({
         <button
           className={cx(
             "flex items-center gap-2 rounded-2xl px-5 py-3 text-sm font-bold shadow-sm transition-all disabled:opacity-50 disabled:cursor-not-allowed",
-            liveMode === "query"
-              ? "bg-emerald-600 text-white hover:bg-emerald-700"
+            liveMode === "query" || liveMode === "monitors"
+              ? "bg-blue-600 text-white hover:bg-blue-700"
               : "bg-white text-slate-700 border border-slate-200/60 hover:bg-slate-50"
           )}
-          disabled={!q.trim()}
+          disabled={!q.trim() && armedCount === 0}
           onClick={() => {
-            setLiveMode("query");
             setActiveView("live");
-            startLiveFromQuery();
+            startLiveFeed();
           }}
-          title="Subscribe to the current query (SSE) and get new items in real-time"
+          title="Live feed from query or armed alerts"
         >
-          <Icon name="wifi_tethering" /> Live Query
-        </button>
-
-        <button
-          className={cx(
-            "flex items-center gap-2 rounded-2xl px-5 py-3 text-sm font-bold shadow-sm transition-all",
-            liveMode === "monitors"
-              ? "bg-emerald-600 text-white hover:bg-emerald-700"
-              : "bg-white text-slate-700 border border-slate-200/60 hover:bg-slate-50"
-          )}
-          onClick={openArmedFeed}
-          title="Subscribe to all armed monitors"
-        >
-          <Icon name="insights" /> Armed alerts{armedCount ? ` (${armedCount})` : ""}
+          <Icon name="wifi_tethering" /> Live Feed{liveMode === "monitors" ? ` (Armed ${armedCount})` : " (Query)"}
         </button>
       </div>
 
@@ -164,7 +149,7 @@ export function TopBar({
           <span className={cx(
             "flex items-center gap-1.5 rounded-lg px-2.5 py-1 text-[11px] font-bold uppercase tracking-wider",
             (liveMode === "query" || liveMode === "monitors" || selectedAlertId)
-              ? "bg-emerald-500 text-white shadow-sm"
+              ? "bg-blue-500 text-white shadow-sm"
               : "bg-slate-200/50 text-slate-500"
           )}>
             <div
@@ -231,7 +216,7 @@ export function TopBar({
             <button
               className={cx(
                 "flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-bold transition-all",
-                activeView === "live" ? "bg-white text-emerald-700 shadow-sm border border-emerald-100" : "text-slate-500 hover:text-slate-700 hover:bg-slate-200/50"
+                activeView === "live" ? "bg-white text-blue-700 shadow-sm border border-blue-100" : "text-slate-500 hover:text-slate-700 hover:bg-slate-200/50"
               )}
               onClick={() => setActiveView("live")}
             >
@@ -285,7 +270,7 @@ export function TopBar({
             className={cx(
               "hidden lg:flex h-10 w-10 items-center justify-center rounded-xl shadow-sm border transition-all",
               inspectorOpen 
-                ? "bg-white border-slate-200/60 hover:bg-slate-50 text-emerald-600" 
+                ? "bg-white border-slate-200/60 hover:bg-slate-50 text-blue-600" 
                 : "bg-slate-100 border-slate-200/60 hover:bg-slate-200 text-slate-400"
             )}
             onClick={() => setInspectorOpen(!inspectorOpen)} 

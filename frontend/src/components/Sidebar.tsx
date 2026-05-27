@@ -24,7 +24,7 @@ interface SidebarProps {
 
 function Badge({ children }: { children: React.ReactNode }) {
   return (
-    <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-bold text-emerald-900">
+    <span className="rounded-full bg-blue-100 px-2 py-0.5 text-[10px] font-bold text-blue-900">
       {children}
     </span>
   );
@@ -130,17 +130,7 @@ export function Sidebar(props: SidebarProps) {
   return (
     <aside className="flex h-full w-[340px] shrink-0 flex-col overflow-x-hidden border-r border-white/40 bg-white/70 backdrop-blur-xl shadow-[4px_0_24px_rgba(0,0,0,0.02)] transition-all z-20">
       <div className="flex items-center justify-between gap-3 px-6 py-5 border-b border-slate-200/50">
-        <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-emerald-400 to-teal-500 shadow-md">
-            <Icon name="radar" className="text-white text-[24px]" />
-          </div>
-          <div>
-            <div className="text-[15px] font-bold text-slate-800 tracking-tight">VintedRadar</div>
-            <div className="text-[11px] font-medium text-emerald-600/80 uppercase tracking-wider">
-              Live Monitor
-            </div>
-          </div>
-        </div>
+        <div className="text-[14px] font-bold text-slate-800">Saved Searches</div>
         <button
           className="flex h-8 w-8 items-center justify-center rounded-full hover:bg-slate-100 text-slate-500 transition-colors"
           onClick={() => setOpen(false)}
@@ -162,7 +152,7 @@ export function Sidebar(props: SidebarProps) {
               className={cx(
                 "group flex w-full items-center gap-3 rounded-xl border px-3 py-2 text-left transition",
                 liveMode === "monitors"
-                  ? "border-emerald-300 bg-emerald-50/70"
+                  ? "border-blue-300 bg-blue-50/70"
                   : "border-slate-200/60 bg-white/70 hover:bg-white"
               )}
               onClick={selectMonitors}
@@ -171,7 +161,7 @@ export function Sidebar(props: SidebarProps) {
               <div
                 className={cx(
                   "h-2 w-2 rounded-full",
-                  liveMode === "monitors" ? "bg-emerald-500" : "bg-slate-300 group-hover:bg-slate-400"
+                  liveMode === "monitors" ? "bg-blue-500" : "bg-slate-300 group-hover:bg-slate-400"
                 )}
               />
               <div className="min-w-0 flex-1">
@@ -202,7 +192,7 @@ export function Sidebar(props: SidebarProps) {
                     className={cx(
                       "group flex w-full items-center gap-3 rounded-xl border px-3 py-2 text-left transition",
                       active
-                        ? "border-emerald-300 bg-emerald-50/70"
+                        ? "border-blue-300 bg-blue-50/70"
                         : "border-slate-200/60 bg-white/70 hover:bg-white"
                     )}
                     role="button"
@@ -219,7 +209,7 @@ export function Sidebar(props: SidebarProps) {
                       className={cx(
                         "flex h-6 w-6 items-center justify-center rounded-md border transition",
                         armed
-                          ? "border-emerald-400 bg-emerald-50 text-emerald-700"
+                          ? "border-blue-400 bg-blue-50 text-blue-700"
                           : "border-slate-200 bg-white/80 text-slate-400 hover:bg-white"
                       )}
                       title={armed ? "Disarm" : "Arm"}
@@ -235,7 +225,7 @@ export function Sidebar(props: SidebarProps) {
                     <div
                       className={cx(
                         "h-2 w-2 rounded-full",
-                        active ? "bg-emerald-500" : "bg-slate-300 group-hover:bg-slate-400"
+                        active ? "bg-blue-500" : "bg-slate-300 group-hover:bg-slate-400"
                       )}
                     />
                     <div className="min-w-0 flex-1">

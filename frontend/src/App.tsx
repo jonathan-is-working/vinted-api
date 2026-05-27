@@ -101,7 +101,6 @@ export default function App() {
   const liveModeRef = useRef(liveMode);
   const armedIdsRef = useRef<string[]>(armedAlertIds);
 
-  const [hovered, setHovered] = useState<SearchItem | null>(null);
   const [selectedItem, setSelectedItem] = useState<SearchItem | null>(null);
   const [details, setDetails] = useState<ItemDetails | null>(null);
   const [detailsLoading, setDetailsLoading] = useState(false);
@@ -818,8 +817,6 @@ export default function App() {
     void loadItemDetails(selectedItem.id);
   }, [selectedItem?.id]);
 
-  const previewItem = hovered ?? selectedItem;
-
   const refreshNow = () => {
     if (activeView === "search") {
       void runSearch(page);
@@ -837,6 +834,33 @@ export default function App() {
     if (selectedAlertId) startLiveFromSavedAlert(selectedAlertId);
   };
 
+  const startUnifiedLiveFeed = () => {
+    const hasQuery = !!q.trim();
+    const hasArmed = armedAlertIds.length > 0;
+    if (hasQuery && hasArmed) {
+      const useQuery = window.confirm("Live Query?\nOK = query filters\nCancel = armed alerts");
+      if (useQuery) {
+        setLiveMode("query");
+        startLiveFromQuery();
+      } else {
+        setLiveMode("monitors");
+        setSelectedAlertId(null);
+        startLiveFromMonitors(armedAlertIds);
+      }
+      return;
+    }
+    if (hasQuery) {
+      setLiveMode("query");
+      startLiveFromQuery();
+      return;
+    }
+    if (hasArmed) {
+      setLiveMode("monitors");
+      setSelectedAlertId(null);
+      startLiveFromMonitors(armedAlertIds);
+    }
+  };
+
   return (
     <div className="flex h-screen w-full overflow-hidden relative">
       {toast && (
@@ -845,12 +869,12 @@ export default function App() {
             href={toast.url}
             target="_blank"
             rel="noreferrer"
-            className="pointer-events-auto block rounded-2xl border border-emerald-200 bg-white/90 px-4 py-3 text-sm text-slate-900 shadow-lg backdrop-blur transition hover:bg-white"
+            className="pointer-events-auto block rounded-2xl border border-blue-200 bg-white/90 px-4 py-3 text-sm text-slate-900 shadow-lg backdrop-blur transition hover:bg-white"
             title="Open on Vinted"
           >
             <div className="flex items-start gap-2">
               <div className="mt-0.5">
-                <Icon name="bolt" className="text-emerald-600" />
+                <Icon name="bolt" className="text-blue-600" />
               </div>
               <div className="min-w-0">
                 <div className="truncate font-semibold">{toast.title}</div>
@@ -908,10 +932,9 @@ export default function App() {
           runSearch={runSearch}
           loading={loading}
           createAlertFromQuery={createAlertFromQuery}
-          startLiveFromQuery={() => {
-            setLiveMode("query");
+          startLiveFeed={() => {
             setActiveView("live");
-            startLiveFromQuery();
+            startUnifiedLiveFeed();
           }}
           liveMode={liveMode}
           setLiveMode={setLiveMode}
@@ -919,12 +942,6 @@ export default function App() {
           lastUpdatedAt={lastUpdatedAt}
           selectedAlertId={selectedAlertId}
           armedCount={armedAlertIds.length}
-          openArmedFeed={() => {
-            setLiveMode("monitors");
-            setSelectedAlertId(null);
-            setActiveView("live");
-            startLiveFromMonitors(armedAlertIds);
-          }}
           streamItemsLength={streamItems.length}
           activeView={activeView}
           setActiveView={setActiveView}
@@ -985,7 +1002,7 @@ export default function App() {
                     layout={layout}
                     hot={activeView === "live"}
                     selected={selectedItem?.id === it.id}
-                    onHover={setHovered}
+                    onHover={() => {}}
                     onClick={setSelectedItem}
                   />
                 ))}
@@ -995,15 +1012,13 @@ export default function App() {
         </main>
       </div>
 
-      {inspectorOpen && (
+      {inspectorOpen && selectedItem && (
         <InspectorDrawer
-          item={previewItem}
           selectedItem={selectedItem}
           details={details}
           detailsLoading={detailsLoading}
           detailsError={detailsError}
           onClose={() => setSelectedItem(null)}
-          activeView={activeView}
         />
       )}
 
