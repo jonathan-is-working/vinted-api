@@ -22,6 +22,7 @@ const env = getEnv();
 const app = Fastify({
   logger: true
 });
+let telegramCommandPoller: TelegramCommandPoller | undefined;
 
 await app.register(cors, {
   origin: true
@@ -64,12 +65,12 @@ const alertsService = new AlertsService(
 );
 
 if (telegram && env.TELEGRAM_ENABLE_COMMANDS && notifications) {
-  const poller = new TelegramCommandPoller(
+  telegramCommandPoller = new TelegramCommandPoller(
     { botToken: env.TELEGRAM_BOT_TOKEN!, chatId: env.TELEGRAM_CHAT_ID! },
     notifications,
     { clearLimit: env.TELEGRAM_CLEAR_LIMIT, sessions, alertsService }
   );
-  poller.start();
+  telegramCommandPoller.start();
 }
 const catalogService = new CatalogService(vinted, env);
 const itemService = new ItemService(vinted);
@@ -83,10 +84,41 @@ await registerV1Routes(app, {
   telegram,
   sessions,
   catalogService,
-  itemService
+  itemService,
+  healthcheck: async () => {
+    if (env.ALERTS_STORE !== "postgres") return true;
+    try {
+      await alertsStore.pool.query("SELECT 1");
+      return true;
+    } catch {
+      return false;
+    }
+  }
 });
 
 // eslint-disable-next-line @typescript-eslint/no-floating-promises
 alertsService.startAll();
 
 await app.listen({ port: env.PORT, host: env.HOST });
+
+const shutdown = async (signal: string) => {
+  app.log.info({ signal }, "Shutting down");
+  try {
+    telegramCommandPoller?.stop();
+    await app.close();
+    if (env.ALERTS_STORE === "postgres") {
+      await alertsStore.pool.end();
+    }
+    process.exit(0);
+  } catch (err) {
+    app.log.error({ err }, "Shutdown failed");
+    process.exit(1);
+  }
+};
+
+process.on("SIGINT", () => {
+  void shutdown("SIGINT");
+});
+process.on("SIGTERM", () => {
+  void shutdown("SIGTERM");
+});

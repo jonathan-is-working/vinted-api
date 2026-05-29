@@ -15,6 +15,15 @@ services:
       timeout: 3s
       retries: 20
     restart: unless-stopped
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "50m"
+        max-file: "10"
+        tag: "postgres"
+    labels:
+      logging: "promtail"
+      service: "postgres"
     networks:
       - db
 
@@ -53,6 +62,15 @@ services:
       timeout: 5s
       retries: 10
     restart: unless-stopped
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "50m"
+        max-file: "10"
+        tag: "backend"
+    labels:
+      logging: "promtail"
+      service: "backend"
     networks:
       - db
       - public
@@ -69,6 +87,15 @@ services:
     ports:
       - "127.0.0.1:${FRONTEND_PORT:-5173}:8080"
     restart: unless-stopped
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "50m"
+        max-file: "10"
+        tag: "frontend"
+    labels:
+      logging: "promtail"
+      service: "frontend"
     networks:
       - public
 

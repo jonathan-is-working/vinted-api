@@ -27,11 +27,18 @@ export async function registerV1Routes(
     sessions: VintedSessionManager;
     catalogService: CatalogService;
     itemService: ItemService;
+    healthcheck?: () => Promise<boolean>;
   }
 ) {
   // Stable API surface.
   await app.register(async (v1) => {
-    v1.get("/health", async () => ({ ok: true }));
+    v1.get("/health", async (_req, reply) => {
+      const ok = deps.healthcheck ? await deps.healthcheck() : true;
+      if (!ok) {
+        return reply.code(503).send({ ok: false });
+      }
+      return { ok: true };
+    });
     await registerSearchRoute(v1, { searchService: deps.searchService });
     await registerAlertsRoutes(v1, { alertsService: deps.alertsService });
     await registerLiveRoutes(v1, { liveSearch: deps.liveSearch });
@@ -48,5 +55,11 @@ export async function registerV1Routes(
 
   // Back-compat for earlier PoC.
   await registerSearchRoute(app, { searchService: deps.searchService });
-  app.get("/health", async () => ({ ok: true }));
+  app.get("/health", async (_req, reply) => {
+    const ok = deps.healthcheck ? await deps.healthcheck() : true;
+    if (!ok) {
+      return reply.code(503).send({ ok: false });
+    }
+    return { ok: true };
+  });
 }
