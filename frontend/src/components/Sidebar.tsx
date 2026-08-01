@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useMemo, useState } from "react";
 import { Alert } from "../types";
 import { cx } from "../utils";
 import { Icon, type IconName } from "./Icon";
@@ -124,6 +124,14 @@ export function Sidebar(props: SidebarProps) {
     onEditAlert,
     // filters are now in a popup modal; keep sidebar clean
   } = props;
+  const [searchFilter, setSearchFilter] = useState<"armed" | "active" | "all" | "disabled">("armed");
+
+  const visibleAlerts = useMemo(() => {
+    if (searchFilter === "armed") return alerts.filter((alert) => alert.enabled !== false && armedAlertIds.includes(alert.id));
+    if (searchFilter === "active") return alerts.filter((alert) => alert.enabled !== false && !armedAlertIds.includes(alert.id));
+    if (searchFilter === "disabled") return alerts.filter((alert) => alert.enabled === false);
+    return alerts;
+  }, [alerts, armedAlertIds, searchFilter]);
 
   if (!open) return null;
 
@@ -151,9 +159,29 @@ export function Sidebar(props: SidebarProps) {
           title="Saved Searches"
           icon="bookmark"
           defaultOpen
-          badge={alerts.length ? <Badge>{alerts.length}</Badge> : undefined}
+          badge={visibleAlerts.length ? <Badge>{visibleAlerts.length}</Badge> : undefined}
         >
           <div className="grid gap-2">
+            <div className="grid grid-cols-4 rounded-xl bg-slate-100 p-1">
+              {([
+                ["armed", "Armed"],
+                ["active", "Actives"],
+                ["all", "Toutes"],
+                ["disabled", "Off"]
+              ] as const).map(([value, label]) => (
+                <button
+                  key={value}
+                  onClick={() => setSearchFilter(value)}
+                  className={cx(
+                    "rounded-lg px-1 py-1.5 text-[10px] font-medium transition",
+                    searchFilter === value ? "bg-white text-blue-700 shadow-sm" : "text-slate-500 hover:text-slate-800"
+                  )}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+
             <button
               className={cx(
                 "group flex w-full items-center gap-3 rounded-xl border px-3 py-2 text-left transition",
@@ -188,8 +216,8 @@ export function Sidebar(props: SidebarProps) {
                 <div className="h-9 rounded-xl bg-slate-200/70" />
                 <div className="h-9 rounded-xl bg-slate-200/70" />
               </div>
-            ) : alerts.length ? (
-              alerts.map((a) => {
+            ) : visibleAlerts.length ? (
+              visibleAlerts.map((a) => {
                 const active = selectedAlertId === a.id;
                 const armed = armedAlertIds.includes(a.id);
                 return (
@@ -267,7 +295,7 @@ export function Sidebar(props: SidebarProps) {
               })
             ) : (
               <div className="rounded-xl border border-dashed border-slate-300 bg-white/60 p-3 text-center text-[12px] text-slate-600">
-                No monitors yet. Search, then click “Arm alert”.
+                {searchFilter === "armed" ? "Aucune alerte armed." : searchFilter === "disabled" ? "Aucune alerte désactivée." : "Aucune saved search dans ce filtre."}
               </div>
             )}
 
