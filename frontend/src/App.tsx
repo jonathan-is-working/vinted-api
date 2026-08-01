@@ -1148,7 +1148,7 @@ function LandingPage() {
               Friply transforme tes recherches en moniteurs personnels et pousse les nouveaux articles dans les bons chats Telegram, au moment où ils apparaissent.
             </p>
             <div className="mt-9 flex flex-wrap gap-3">
-              <button onClick={() => navigateTo("/dashboard")} className="rounded-xl bg-blue-600 px-5 py-3.5 text-sm font-medium text-white shadow-lg shadow-blue-600/15 transition hover:bg-blue-700">Ouvrir mon radar</button>
+              <button onClick={() => navigateTo("/choose-profile")} className="rounded-xl bg-blue-600 px-5 py-3.5 text-sm font-medium text-white shadow-lg shadow-blue-600/15 transition hover:bg-blue-700">Ouvrir mon radar</button>
               <button onClick={() => navigateTo("/profiles")} className="rounded-xl border border-slate-200 bg-white/75 px-5 py-3.5 text-sm font-medium text-slate-600 transition hover:border-slate-300 hover:bg-white">Configurer Telegram</button>
             </div>
             <p className="mt-9 text-xs text-slate-400">Hébergé chez toi · Un profil par proche · Filtres Vinted importables</p>
@@ -1240,7 +1240,7 @@ function ProfilesPage() {
     <div className="profiles-shell min-h-screen bg-slate-100">
       <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-5">
         <button onClick={() => navigateTo("/")} className="text-sm font-medium tracking-[-0.03em] text-slate-800">Friply</button>
-        <button onClick={() => navigateTo("/dashboard")} className="rounded-xl bg-blue-600 px-4 py-2 text-xs font-bold text-white hover:bg-blue-700">Dashboard</button>
+        <button onClick={() => navigateTo("/choose-profile")} className="rounded-xl bg-blue-600 px-4 py-2 text-xs font-bold text-white hover:bg-blue-700">Ouvrir mon radar</button>
       </div>
       <TelegramProfilesModal
         open
@@ -1256,6 +1256,65 @@ function ProfilesPage() {
   );
 }
 
+function ProfileChooserPage() {
+  const [profiles, setProfiles] = useState<TelegramProfile[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    void api<TelegramProfile[]>("/v1/telegram-profiles")
+      .then(setProfiles)
+      .catch(() => setProfiles([]))
+      .finally(() => setLoading(false));
+  }, []);
+
+  return (
+    <main className="profiles-shell min-h-screen bg-[#090d18] text-white">
+      <div className="mx-auto flex min-h-screen max-w-5xl flex-col px-6 py-8 sm:px-10 sm:py-10">
+        <header className="flex items-center justify-between">
+          <button onClick={() => navigateTo("/")} className="text-sm font-medium tracking-[-0.03em] text-white/90">Friply</button>
+          <button onClick={() => navigateTo("/profiles")} className="text-xs text-white/50 transition hover:text-white">Gérer les profils</button>
+        </header>
+
+        <section className="flex flex-1 flex-col items-center justify-center py-16 text-center">
+          <p className="text-xs font-medium uppercase tracking-[0.18em] text-blue-300">Espace personnel</p>
+          <h1 className="mt-4 text-3xl font-medium tracking-[-0.05em] text-white sm:text-5xl">Qui utilise Friply ?</h1>
+          <p className="mt-4 max-w-md text-sm leading-6 text-white/45">Choisis un profil pour ouvrir ses alertes et son dashboard Telegram.</p>
+
+          {loading ? (
+            <div className="mt-12 text-sm text-white/50">Chargement des profils…</div>
+          ) : profiles.length ? (
+            <div className="mt-12 grid w-full max-w-3xl grid-cols-2 gap-5 sm:grid-cols-3 md:grid-cols-4">
+              {profiles.map((profile, index) => {
+                const initials = profile.name.trim().split(/\s+/).map((part) => part[0]).join("").slice(0, 2).toUpperCase();
+                const colors = ["bg-blue-600", "bg-indigo-600", "bg-sky-600", "bg-violet-600"];
+                return (
+                  <button
+                    key={profile.id}
+                    onClick={() => navigateTo(`/dashboard?profileId=${encodeURIComponent(profile.id)}`)}
+                    className="group flex flex-col items-center gap-3 rounded-2xl p-3 transition hover:bg-white/[0.04]"
+                  >
+                    <span className={`grid aspect-square w-24 place-items-center rounded-xl ${colors[index % colors.length]} text-2xl font-medium text-white shadow-2xl shadow-black/20 transition group-hover:scale-105 group-focus-visible:ring-2 group-focus-visible:ring-blue-300 sm:w-32 sm:rounded-2xl sm:text-3xl`}>
+                      {initials || "?"}
+                    </span>
+                    <span className="max-w-full truncate text-sm text-white/70 transition group-hover:text-white">{profile.name}</span>
+                  </button>
+                );
+              })}
+            </div>
+          ) : (
+            <div className="mt-12 rounded-2xl border border-white/10 bg-white/[0.04] px-6 py-8 text-center">
+              <p className="text-sm text-white/65">Aucun profil Telegram n&apos;est configuré.</p>
+              <button onClick={() => navigateTo("/profiles")} className="mt-5 rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-blue-500">Configurer un profil</button>
+            </div>
+          )}
+        </section>
+
+        <footer className="text-center text-xs text-white/25">Sélectionne un profil pour continuer</footer>
+      </div>
+    </main>
+  );
+}
+
 export default function App() {
   const [path, setPath] = useState(() => window.location.pathname);
 
@@ -1265,6 +1324,7 @@ export default function App() {
     return () => window.removeEventListener("popstate", onPopState);
   }, []);
 
+  if (path === "/choose-profile") return <ProfileChooserPage />;
   if (path === "/profiles") return <ProfilesPage />;
   if (path === "/dashboard") return <DashboardApp />;
   return <LandingPage />;
