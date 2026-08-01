@@ -10,14 +10,12 @@ interface SidebarProps {
   // Alerts
   alertsLoading: boolean;
   alerts: Alert[];
-  alertsError: string | null;
   selectedAlertId: string | null;
   setSelectedAlertId: (id: string | null) => void;
   liveMode: "saved" | "query" | "monitors";
   selectMonitors: () => void;
   armedAlertIds: string[];
   setArmedAlertIds: React.Dispatch<React.SetStateAction<string[]>>;
-  streamError: string | null;
   deleteAlert: (id: string) => void;
   onEditAlert: (id: string) => void;
 }
@@ -112,14 +110,12 @@ export function Sidebar(props: SidebarProps) {
     setOpen,
     alertsLoading,
     alerts,
-    alertsError,
     selectedAlertId,
     setSelectedAlertId,
     liveMode,
     selectMonitors,
     armedAlertIds,
     setArmedAlertIds,
-    streamError,
     deleteAlert,
     onEditAlert,
     // filters are now in a popup modal; keep sidebar clean
@@ -144,7 +140,7 @@ export function Sidebar(props: SidebarProps) {
       />
       <aside className="fixed inset-y-0 left-0 z-40 flex w-[min(340px,calc(100vw-24px))] flex-col overflow-x-hidden border-r border-slate-200 bg-white shadow-2xl transition-transform lg:static lg:z-20 lg:h-full lg:w-[320px] lg:shrink-0 lg:bg-white/80 lg:shadow-[4px_0_24px_rgba(15,23,42,0.03)] lg:backdrop-blur-xl">
       <div className="flex items-center justify-between gap-3 border-b border-slate-200 px-5 py-4">
-        <div><div className="text-sm font-semibold tracking-[-0.03em] text-slate-900">Friply</div><div className="mt-0.5 text-[10px] font-medium uppercase tracking-[0.12em] text-slate-400">Mes alertes</div></div>
+        <button onClick={() => { window.history.pushState({}, "", "/"); window.dispatchEvent(new PopStateEvent("popstate")); }} className="text-left"><div className="text-sm font-semibold tracking-[-0.03em] text-slate-900">Friply</div><div className="mt-0.5 text-[10px] font-medium uppercase tracking-[0.12em] text-slate-400">Mes alertes</div></button>
         <button
           className="flex h-8 w-8 items-center justify-center rounded-full hover:bg-slate-100 text-slate-500 transition-colors"
           onClick={() => setOpen(false)}
@@ -296,17 +292,6 @@ export function Sidebar(props: SidebarProps) {
             ) : (
               <div className="rounded-xl border border-dashed border-slate-300 bg-white/60 p-3 text-center text-[12px] text-slate-600">
                 {searchFilter === "armed" ? "Aucune alerte armed." : searchFilter === "disabled" ? "Aucune alerte désactivée." : "Aucune saved search dans ce filtre."}
-              </div>
-            )}
-
-            {alertsError && (
-              <div className="rounded-xl border border-rose-200 bg-rose-50 p-3 text-[12px] text-rose-700">
-                {alertsError}
-              </div>
-            )}
-            {streamError && (
-              <div className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-[12px] text-amber-800">
-                {streamError}
               </div>
             )}
 

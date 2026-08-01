@@ -53,7 +53,7 @@ export function TopBar({
     <>
       <header className="sticky top-0 z-20 border-b border-slate-200 bg-white/95 px-3 py-3 backdrop-blur-xl sm:hidden">
         <div className="mb-3 flex items-center justify-between">
-          <button onClick={() => setSidebarOpen(true)} className="text-sm font-medium tracking-[-0.03em] text-slate-900">Friply</button>
+          <button onClick={() => { window.history.pushState({}, "", "/"); window.dispatchEvent(new PopStateEvent("popstate")); }} className="text-sm font-medium tracking-[-0.03em] text-slate-900">Friply</button>
           <div className="flex items-center gap-1">
             <button onClick={openTelegramProfiles} className="grid size-9 place-items-center rounded-full text-slate-600" aria-label="Profils Telegram"><Icon name="notifications_active" className="size-5" /></button>
             <button onClick={() => setSidebarOpen(true)} className="grid size-9 place-items-center rounded-full bg-slate-100 text-slate-700" aria-label="Mes alertes"><Icon name="menu_open" className="size-5" /></button>

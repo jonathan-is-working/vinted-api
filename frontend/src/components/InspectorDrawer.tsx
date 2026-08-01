@@ -7,12 +7,11 @@ interface InspectorDrawerProps {
   selectedItem: SearchItem | null;
   details: ItemDetails | null;
   detailsLoading: boolean;
-  detailsError: string | null;
   onClose: () => void;
 }
 
 export function InspectorDrawer({
-  selectedItem, details, detailsLoading, detailsError, onClose
+  selectedItem, details, detailsLoading, onClose
 }: InspectorDrawerProps) {
   const item = selectedItem;
   if (!item) return null;
@@ -122,10 +121,6 @@ export function InspectorDrawer({
                   <div className="h-3 bg-slate-200 rounded w-full"></div>
                   <div className="h-3 bg-slate-200 rounded w-5/6"></div>
                   <div className="h-3 bg-slate-200 rounded w-4/6"></div>
-                </div>
-              ) : detailsError ? (
-                <div className="rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-700 font-medium">
-                  {detailsError}
                 </div>
               ) : (
                 <div className="whitespace-pre-wrap text-[14px] leading-relaxed text-slate-700">

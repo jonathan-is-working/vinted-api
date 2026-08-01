@@ -1,12 +1,21 @@
 @import "tailwindcss";
 
 @layer base {
+  :root {
+    color-scheme: dark;
+  }
+
   body {
     font-family: "Montserrat", ui-sans-serif, system-ui, sans-serif;
-    @apply bg-slate-50 text-slate-900 antialiased;
-    background-image: radial-gradient(circle at 85% 0%, rgba(59, 130, 246, 0.10), transparent 30%);
-    background-attachment: fixed;
+    @apply bg-[#080b12] text-slate-100 antialiased;
     min-height: 100vh;
+  }
+
+  button, input, select, textarea { font: inherit; }
+
+  :focus-visible {
+    outline: 2px solid #60a5fa;
+    outline-offset: 3px;
   }
 
   /* Monospace fallback for specific elements */
@@ -20,10 +29,91 @@
   .dashboard-shell,
   .profiles-shell {
     font-family: "Montserrat", ui-sans-serif, system-ui, sans-serif;
+    isolation: isolate;
+  }
+
+  .landing-shell {
+    background: #080b12;
+    background-image: radial-gradient(circle at 74% 8%, rgba(37, 99, 235, .18), transparent 26rem), radial-gradient(circle at 15% 34%, rgba(124, 58, 237, .12), transparent 28rem);
   }
 
   .dashboard-shell {
-    background: linear-gradient(180deg, rgba(255, 255, 255, 0.72), rgba(248, 250, 252, 0.88));
+    background: #080b12;
+    background-image: radial-gradient(circle at 72% -8%, rgba(37, 99, 235, .12), transparent 28rem), linear-gradient(180deg, #0b1020 0%, #080b12 46%);
+  }
+
+  .profiles-shell {
+    background: #080b12;
+    background-image: radial-gradient(circle at 50% 18%, rgba(37, 99, 235, .16), transparent 25rem);
+  }
+
+  .dashboard-shell [class*="bg-white"],
+  .dashboard-shell [class*="bg-slate-50"],
+  .dashboard-shell [class*="bg-slate-100"],
+  .dashboard-shell [class*="bg-white/"] {
+    background-color: rgba(17, 24, 39, .82) !important;
+  }
+
+  .dashboard-shell [class*="bg-blue-50"],
+  .dashboard-shell [class*="bg-blue-100"] {
+    background-color: rgba(37, 99, 235, .14) !important;
+  }
+
+  .dashboard-shell [class*="border-slate-200"],
+  .dashboard-shell [class*="border-slate-300"] {
+    border-color: rgba(148, 163, 184, .16) !important;
+  }
+
+  .dashboard-shell [class*="text-slate-900"],
+  .dashboard-shell [class*="text-slate-800"],
+  .dashboard-shell [class*="text-slate-700"] {
+    color: #f8fafc !important;
+  }
+
+  .dashboard-shell [class*="text-slate-600"],
+  .dashboard-shell [class*="text-slate-500"] {
+    color: #94a3b8 !important;
+  }
+
+  .dashboard-shell [class*="text-slate-400"] {
+    color: #64748b !important;
+  }
+
+  .profiles-shell [class*="bg-white"],
+  .profiles-shell [class*="bg-slate-50"],
+  .profiles-shell [class*="bg-slate-100"] {
+    background-color: rgba(17, 24, 39, .94) !important;
+  }
+
+  .profiles-shell [class*="border-slate-200"],
+  .profiles-shell [class*="border-slate-300"] {
+    border-color: rgba(148, 163, 184, .16) !important;
+  }
+
+  .profiles-shell [class*="text-slate-900"],
+  .profiles-shell [class*="text-slate-800"],
+  .profiles-shell [class*="text-slate-700"] {
+    color: #f8fafc !important;
+  }
+
+  .profiles-shell [class*="text-slate-600"],
+  .profiles-shell [class*="text-slate-500"] {
+    color: #94a3b8 !important;
+  }
+
+  .profiles-shell input,
+  .profiles-shell textarea,
+  .dashboard-shell input,
+  .dashboard-shell textarea,
+  .dashboard-shell select {
+    color: #f8fafc !important;
+    background-color: rgba(15, 23, 42, .9) !important;
+  }
+
+  .profiles-shell input::placeholder,
+  .dashboard-shell input::placeholder,
+  .dashboard-shell textarea::placeholder {
+    color: #64748b !important;
   }
 }
 
@@ -36,9 +126,17 @@
     background: transparent;
   }
   .custom-scrollbar::-webkit-scrollbar-thumb {
-    @apply bg-slate-300 rounded-full;
+    @apply rounded-full bg-slate-700;
   }
   .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-    @apply bg-slate-400;
+    @apply bg-slate-600;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    scroll-behavior: auto !important;
+    animation-duration: .01ms !important;
+    transition-duration: .01ms !important;
   }
 }

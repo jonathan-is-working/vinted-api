@@ -75,7 +75,6 @@ function DashboardApp() {
 
   const [data, setData] = useState<SearchResponse | null>(null);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
 
   const [alerts, setAlerts] = useState<Alert[]>([]);
   const [telegramProfiles, setTelegramProfiles] = useState<TelegramProfile[]>([]);
@@ -84,7 +83,6 @@ function DashboardApp() {
   );
   const [telegramProfilesOpen, setTelegramProfilesOpen] = useState(false);
   const [alertsLoading, setAlertsLoading] = useState(false);
-  const [alertsError, setAlertsError] = useState<string | null>(null);
   const [selectedAlertId, setSelectedAlertId] = useState<string | null>(null);
   const [armedInit] = useState(() => {
     try {
@@ -103,7 +101,6 @@ function DashboardApp() {
     }
   });
   const [streamItems, setStreamItems] = useState<SearchItem[]>([]);
-  const [streamError, setStreamError] = useState<string | null>(null);
   const esRef = useRef<EventSource | null>(null);
   const liveModeRef = useRef(liveMode);
   const armedIdsRef = useRef<string[]>(armedAlertIds);
@@ -111,7 +108,6 @@ function DashboardApp() {
   const [selectedItem, setSelectedItem] = useState<SearchItem | null>(null);
   const [details, setDetails] = useState<ItemDetails | null>(null);
   const [detailsLoading, setDetailsLoading] = useState(false);
-  const [detailsError, setDetailsError] = useState<string | null>(null);
 
   const items = useMemo(() => {
     return activeView === "live" ? streamItems : data?.items ?? [];
@@ -139,7 +135,6 @@ function DashboardApp() {
 
   async function loadAlerts() {
     setAlertsLoading(true);
-    setAlertsError(null);
     try {
       const list = await api<Alert[]>("/v1/alerts");
       setAlerts(list);
@@ -154,7 +149,7 @@ function DashboardApp() {
         return [];
       });
     } catch (e) {
-      setAlertsError(e instanceof Error ? e.message : "Unknown error");
+      console.error("Failed to load alerts", e);
     } finally {
       setAlertsLoading(false);
     }
@@ -360,7 +355,6 @@ function DashboardApp() {
     esRef.current?.close();
     esRef.current = null;
     setStreamItems([]);
-    setStreamError(null);
 
     const es = new EventSource(url.toString());
     esRef.current = es;
@@ -397,12 +391,12 @@ function DashboardApp() {
     es.addEventListener("alert.error", (ev) => {
       try {
         const parsed = JSON.parse((ev as MessageEvent).data) as AlertEvent;
-        setStreamError(parsed.payload?.message ?? "Alert error");
+        console.error("Alert stream error", parsed.payload?.message ?? "Alert error");
       } catch {
-        setStreamError("Alert error");
+        console.error("Alert stream error", (ev as MessageEvent).data);
       }
     });
-    es.onerror = () => setStreamError("Stream disconnected. Retrying…");
+    es.onerror = () => console.error("Alert stream disconnected; retrying");
   }
 
   function startLiveFromSavedAlert(alertId: string) {
@@ -457,13 +451,12 @@ function DashboardApp() {
 
   async function loadItemDetails(itemId: number) {
     setDetailsLoading(true);
-    setDetailsError(null);
     setDetails(null);
     try {
       const res = await api<ItemDetails>(`/v1/items/${encodeURIComponent(String(itemId))}`);
       setDetails(res);
     } catch (e) {
-      setDetailsError(e instanceof Error ? e.message : "Unknown error");
+      console.error("Failed to load item details", e);
     } finally {
       setDetailsLoading(false);
     }
@@ -473,7 +466,6 @@ function DashboardApp() {
     const trimmed = q.trim();
     if (!trimmed) return;
     setLoading(true);
-    setError(null);
     try {
       const url = new URL("/v1/search", API_BASE_URL);
       url.searchParams.set("q", trimmed);
@@ -518,7 +510,7 @@ function DashboardApp() {
       setActiveView("search");
       setLastUpdatedAt(Date.now());
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Unknown error");
+      console.error("Search failed", e);
     } finally {
       setLoading(false);
     }
@@ -527,7 +519,6 @@ function DashboardApp() {
   async function createAlertFromQuery() {
     const trimmed = q.trim();
     if (!trimmed) return;
-    setAlertsError(null);
     try {
       const min = priceMin.trim();
       const max = priceMax.trim();
@@ -574,19 +565,18 @@ function DashboardApp() {
       setLiveMode("monitors");
       setActiveView("live");
     } catch (e) {
-      setAlertsError(e instanceof Error ? e.message : "Unknown error");
+      console.error("Failed to create alert", e);
     }
   }
 
   async function deleteAlert(id: string) {
-    setAlertsError(null);
     try {
       await api<{ ok: true }>(`/v1/alerts/${encodeURIComponent(id)}`, { method: "DELETE" });
       if (selectedAlertId === id) setSelectedAlertId(null);
       setStreamItems([]);
       await loadAlerts();
     } catch (e) {
-      setAlertsError(e instanceof Error ? e.message : "Unknown error");
+      console.error("Failed to delete alert", e);
     }
   }
 
@@ -906,7 +896,6 @@ function DashboardApp() {
         setOpen={setSidebarOpen}
         alerts={alerts}
         alertsLoading={alertsLoading}
-        alertsError={alertsError}
         selectedAlertId={selectedAlertId}
         setSelectedAlertId={(id) => {
           setLiveMode("saved");
@@ -921,7 +910,6 @@ function DashboardApp() {
         }}
         armedAlertIds={armedAlertIds}
         setArmedAlertIds={setArmedAlertIds}
-        streamError={streamError}
         deleteAlert={deleteAlert}
         onEditAlert={(id) => {
           const a = alerts.find((x) => x.id === id);
@@ -954,12 +942,6 @@ function DashboardApp() {
 
         <main className="flex-1 overflow-y-auto p-3 pb-8 custom-scrollbar sm:p-6">
           <div className="mx-auto max-w-7xl">
-            {error && (
-              <div className="mb-6 rounded-2xl border border-rose-200 bg-rose-50/80 p-4 text-[14px] font-medium text-rose-700 shadow-sm backdrop-blur">
-                {error}
-              </div>
-            )}
-
             {loading ? (
               <div className="grid gap-3 max-w-4xl mx-auto">
                 <SkeletonRow />
@@ -974,12 +956,12 @@ function DashboardApp() {
                   <Icon name={activeView === "live" ? "radar" : "search"} className="text-[32px]" />
                 </div>
                 <h3 className="text-lg font-bold text-slate-800 mb-2">
-                  {activeView === "live" ? "Listening for deals..." : "No results found"}
+                  {activeView === "live" ? "En attente" : "Aucun résultat"}
                 </h3>
                 <p className="text-slate-500 max-w-sm leading-relaxed">
                   {activeView === "live"
-                    ? "Choisis une alerte ou arme un moniteur pour recevoir les nouveaux articles ici."
-                    : "Modifie ta recherche ou tes filtres, puis relance la recherche."}
+                    ? "Choisis une alerte active."
+                    : "Modifie la recherche ou les filtres."}
                 </p>
               </div>
             ) : (
@@ -1006,7 +988,6 @@ function DashboardApp() {
           selectedItem={selectedItem}
           details={details}
           detailsLoading={detailsLoading}
-          detailsError={detailsError}
           onClose={() => setSelectedItem(null)}
         />
       )}
@@ -1103,108 +1084,100 @@ function navigateTo(path: string) {
   window.dispatchEvent(new PopStateEvent("popstate"));
 }
 
-const landingFeatures = [
-  {
-    title: "Des recherches qui restent actives",
-    description: "Transforme tes filtres Vinted en moniteurs et laisse le radar surveiller les nouvelles annonces."
-  },
-  {
-    title: "Un bot par personne",
-    description: "Associe chaque alerte au bon profil Telegram. Chacun reçoit uniquement ses propres trouvailles."
-  },
-  {
-    title: "Le filtre est le signal",
-    description: "Colle une URL Vinted ou affine à la main : catégories, marques, tailles, états et prix restent synchronisés."
-  }
-];
-
-const landingSteps = [
-  ["01", "Connecte Telegram", "Ajoute un profil et vérifie l’envoi avec un message de test."],
-  ["02", "Pose ton filtre", "Utilise l’interface Vinted ou compose une recherche précise dans Radar."],
-  ["03", "Laisse tourner", "Les nouveautés pertinentes arrivent dans le bon chat, sans rafraîchir une page."]
-];
-
-function LandingPage() {
+function LegacyLandingPage() {
   return (
-    <main className="landing-shell min-h-screen overflow-hidden bg-slate-50 text-slate-950">
-      <div className="pointer-events-none absolute inset-x-0 top-0 h-[580px] bg-[radial-gradient(circle_at_70%_18%,rgba(37,99,235,0.14),transparent_28%),radial-gradient(circle_at_28%_0%,rgba(125,211,252,0.17),transparent_32%)]" />
-      <div className="relative mx-auto max-w-7xl px-5 pb-10 pt-5 sm:px-8 lg:px-10">
-        <header className="flex items-center justify-between py-3">
-          <button onClick={() => navigateTo("/")} className="text-sm font-medium tracking-[-0.03em] text-slate-950" aria-label="Accueil Friply">Friply</button>
+    <main className="landing-shell min-h-screen overflow-hidden text-white">
+      <div className="mx-auto max-w-7xl px-5 pb-10 sm:px-8 lg:px-10">
+        <header className="flex items-center justify-between border-b border-white/[0.08] py-5">
+          <button onClick={() => navigateTo("/")} className="text-sm font-medium tracking-[-0.04em] text-white">Friply</button>
           <nav className="flex items-center gap-2" aria-label="Navigation principale">
-            <button onClick={() => navigateTo("/profiles")} className="hidden px-3 py-2 text-xs font-medium text-slate-500 transition hover:text-slate-950 sm:inline-flex">Profils Telegram</button>
-            <button onClick={() => navigateTo("/dashboard")} className="rounded-xl border border-slate-200 bg-white/70 px-4 py-2.5 text-xs font-medium text-slate-800 transition hover:border-slate-300 hover:bg-white">Ouvrir le dashboard</button>
+            <button onClick={() => navigateTo("/profiles")} className="hidden px-3 py-2 text-xs text-white/45 transition hover:text-white sm:inline-flex">Profils Telegram</button>
+            <button onClick={() => navigateTo("/choose-profile")} className="rounded-lg border border-white/10 bg-white/[0.06] px-4 py-2.5 text-xs text-white transition hover:bg-white/10">Ouvrir</button>
           </nav>
         </header>
 
-        <section className="grid items-center gap-12 pb-20 pt-20 lg:grid-cols-[0.94fr_1.06fr] lg:pb-28 lg:pt-28">
+        <section className="grid items-center gap-14 pb-24 pt-20 lg:grid-cols-[.9fr_1.1fr] lg:pb-32 lg:pt-28">
           <div className="max-w-2xl">
-            <p className="text-xs font-medium uppercase tracking-[0.14em] text-blue-600">Veille Vinted privée</p>
-            <h1 className="mt-5 max-w-xl text-5xl font-medium leading-[1.02] tracking-[-0.06em] text-slate-950 sm:text-6xl lg:text-7xl">
-              Ne cherche plus.<br />
-              <span className="text-blue-600">Sois le premier.</span>
-            </h1>
-            <p className="mt-7 max-w-lg text-base leading-7 text-slate-500 sm:text-lg">
-              Friply transforme tes recherches en moniteurs personnels et pousse les nouveaux articles dans les bons chats Telegram, au moment où ils apparaissent.
-            </p>
+            <h1 className="mt-6 max-w-xl text-5xl font-medium leading-[1.02] tracking-[-0.07em] sm:text-6xl lg:text-7xl">Alertes Vinted.<br /><span className="text-blue-400">Dans Telegram.</span></h1>
+            <p className="mt-7 max-w-lg text-base leading-7 text-white/50 sm:text-lg">Crée un filtre, associe un profil Telegram et reçois les nouveaux articles.</p>
             <div className="mt-9 flex flex-wrap gap-3">
-              <button onClick={() => navigateTo("/choose-profile")} className="rounded-xl bg-blue-600 px-5 py-3.5 text-sm font-medium text-white shadow-lg shadow-blue-600/15 transition hover:bg-blue-700">Ouvrir mon radar</button>
-              <button onClick={() => navigateTo("/profiles")} className="rounded-xl border border-slate-200 bg-white/75 px-5 py-3.5 text-sm font-medium text-slate-600 transition hover:border-slate-300 hover:bg-white">Configurer Telegram</button>
+              <button onClick={() => navigateTo("/choose-profile")} className="rounded-lg bg-blue-500 px-5 py-3.5 text-sm text-white shadow-xl shadow-blue-950/40 transition hover:bg-blue-400">Ouvrir</button>
+              <button onClick={() => navigateTo("/profiles")} className="rounded-lg border border-white/10 bg-white/[0.04] px-5 py-3.5 text-sm text-white/70 transition hover:bg-white/[0.08] hover:text-white">Configurer Telegram</button>
             </div>
-            <p className="mt-9 text-xs text-slate-400">Hébergé chez toi · Un profil par proche · Filtres Vinted importables</p>
           </div>
 
-          <div className="relative mx-auto w-full max-w-2xl lg:max-w-none">
-            <div className="absolute -inset-5 -z-10 rounded-[2.5rem] bg-blue-500/8 blur-3xl" />
-            <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white/90 shadow-xl shadow-slate-900/8 backdrop-blur-xl">
-              <div className="flex items-center justify-between border-b border-slate-100 px-5 py-4 sm:px-6"><p className="text-sm font-medium text-slate-800">Nouvelles trouvailles</p><p className="text-xs text-slate-400">Sneakers · streetwear · denim</p></div>
-              <div className="grid gap-3 p-4 sm:p-5">
-                <div className="flex items-center gap-3 rounded-xl border border-blue-100 bg-blue-50/60 p-3.5">
-                  <div className="grid size-11 shrink-0 place-items-center rounded-lg bg-slate-900 text-xs font-medium text-white">€42</div>
-                  <div className="min-w-0 flex-1"><p className="truncate text-sm font-medium">Nike Air Force 1 blanches</p><p className="mt-1 text-[11px] text-slate-500">42 · Très bon état</p></div>
-                </div>
-                <div className="flex items-center gap-3 rounded-xl border border-slate-100 bg-white p-3.5">
-                  <div className="grid size-11 shrink-0 place-items-center rounded-lg bg-amber-100 text-xs font-medium text-amber-700">€35</div>
-                  <div className="min-w-0 flex-1"><p className="truncate text-sm font-medium">Sweat Nike Tech Fleece</p><p className="mt-1 text-[11px] text-slate-500">M · Bon état</p></div>
-                </div>
-                <div className="flex items-center gap-3 rounded-xl border border-slate-100 bg-white p-3.5">
-                  <div className="grid size-11 shrink-0 place-items-center rounded-lg bg-rose-100 text-xs font-medium text-rose-700">€27</div>
-                  <div className="min-w-0 flex-1"><p className="truncate text-sm font-medium">Jean Levi&apos;s 501</p><p className="mt-1 text-[11px] text-slate-500">W32 L32 · Excellent état</p></div>
-                </div>
+          <div className="relative">
+            <div className="absolute -inset-8 rounded-[2rem] bg-blue-600/15 blur-3xl" />
+            <div className="relative overflow-hidden rounded-2xl border border-white/10 bg-[#101827]/90 shadow-2xl shadow-black/40 backdrop-blur-xl">
+              <div className="flex items-center justify-between border-b border-white/[0.08] px-5 py-4"><div><p className="text-sm text-white">Nouveaux articles</p><p className="mt-1 text-[11px] text-white/35">3 résultats</p></div><span className="size-2 rounded-full bg-blue-400 shadow-lg shadow-blue-400/70" /></div>
+              <div className="grid gap-2 p-3 sm:p-4">
+                {[['Nike Air Force 1', '42 · Très bon état', '42 €'], ['Tech Fleece', 'M · Bon état', '35 €'], ['Levi’s 501 denim', 'W32 L32 · Excellent', '27 €']].map(([title, meta, price], index) => (
+                  <div key={title} className={`flex items-center gap-3 rounded-xl border p-3.5 ${index === 0 ? 'border-blue-400/30 bg-blue-500/10' : 'border-white/[0.06] bg-white/[0.025]'}`}>
+                    <div className="grid size-11 shrink-0 place-items-center rounded-lg bg-white/[0.08] text-xs text-white/80">{price}</div>
+                    <div className="min-w-0 flex-1"><p className="truncate text-sm text-white/90">{title}</p><p className="mt-1 text-[11px] text-white/35">{meta}</p></div>
+                    <span className="text-[10px] text-blue-300">NEW</span>
+                  </div>
+                ))}
               </div>
+              <div className="border-t border-white/[0.08] px-5 py-3 text-[11px] text-white/30">Telegram</div>
             </div>
           </div>
         </section>
+        <section className="border-t border-white/[0.08] py-16"><h2 className="text-2xl font-medium tracking-[-0.05em] sm:text-3xl">Commencer</h2><p className="mt-3 text-sm text-white/40">Choisis un profil Telegram ou ouvre la configuration.</p><button onClick={() => navigateTo("/choose-profile")} className="mt-6 rounded-lg bg-blue-500 px-5 py-3.5 text-sm text-white transition hover:bg-blue-400">Choisir un profil</button></section>
+        <footer className="flex flex-col gap-3 border-t border-white/[0.08] py-8 text-xs text-white/30 sm:flex-row sm:items-center sm:justify-between"><span>Friply</span><button onClick={() => navigateTo("/profiles")} className="text-left transition hover:text-white">Gérer les profils Telegram</button></footer>
+      </div>
+    </main>
+  );
+}
 
-        <section className="border-t border-slate-200 py-20 sm:py-28">
-          <div className="max-w-2xl"><p className="text-xs font-medium uppercase tracking-[0.14em] text-blue-600">Pour une veille simple</p><h2 className="mt-4 text-4xl font-medium tracking-[-0.05em] sm:text-5xl">Tout ce qu&apos;il faut. Rien de plus.</h2></div>
-          <div className="mt-12 grid divide-y divide-slate-200 border-y border-slate-200 md:grid-cols-3 md:divide-x md:divide-y-0">
-            {landingFeatures.map((feature) => (
-              <article key={feature.title} className="py-7 md:px-7 md:py-2 first:md:pl-0 last:md:pr-0">
-                <h3 className="text-base font-medium tracking-[-0.025em]">{feature.title}</h3>
-                <p className="mt-3 text-sm leading-6 text-slate-500">{feature.description}</p>
-              </article>
-            ))}
+function LandingPage() {
+  const [profiles, setProfiles] = useState<TelegramProfile[]>([]);
+  const [profilesOpen, setProfilesOpen] = useState(false);
+
+  useEffect(() => {
+    void api<TelegramProfile[]>("/v1/telegram-profiles").then(setProfiles).catch(() => setProfiles([]));
+  }, []);
+
+  async function createProfile(input: { name: string; botToken: string; chatId: string }) {
+    const profile = await api<TelegramProfile>("/v1/telegram-profiles", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify(input)
+    });
+    setProfiles((current) => [profile, ...current]);
+  }
+
+  async function testProfile(id: string) {
+    await api(`/v1/telegram-profiles/${encodeURIComponent(id)}/test`, { method: "POST" });
+  }
+
+  async function deleteProfile(id: string) {
+    await api(`/v1/telegram-profiles/${encodeURIComponent(id)}`, { method: "DELETE" });
+    setProfiles((current) => current.filter((profile) => profile.id !== id));
+  }
+
+  return (
+    <main className="landing-shell min-h-screen text-white">
+      <div className="mx-auto flex min-h-screen max-w-5xl flex-col px-5 sm:px-8">
+        <header className="flex items-center justify-between border-b border-white/[0.08] py-5">
+          <button onClick={() => navigateTo("/")} className="text-sm font-medium tracking-[-0.04em]">Friply</button>
+          <button onClick={() => navigateTo("/profiles")} className="text-xs text-white/45 transition hover:text-white">Gérer</button>
+        </header>
+
+        <section className="flex flex-1 flex-col items-center justify-center py-16 text-center sm:py-24">
+          <h1 className="text-4xl font-medium tracking-[-0.07em] sm:text-6xl">Choisir un profil</h1>
+          <div className="mt-10 grid w-full max-w-2xl grid-cols-2 gap-4 sm:grid-cols-4 sm:gap-6">
+            {profiles.map((profile, index) => {
+              const initials = profile.name.trim().split(/\s+/).map((part) => part[0]).join("").slice(0, 2).toUpperCase();
+              const colors = ["bg-blue-600", "bg-indigo-600", "bg-sky-600", "bg-violet-600"];
+              return <button key={profile.id} onClick={() => navigateTo(`/dashboard?profileId=${encodeURIComponent(profile.id)}`)} className="group flex flex-col items-center gap-3 rounded-2xl p-3 transition hover:bg-white/[0.04]"><span className={`grid size-24 place-items-center rounded-2xl ${colors[index % colors.length]} text-2xl text-white shadow-xl shadow-black/25 transition group-hover:scale-105 sm:size-28`}>{initials || "?"}</span><span className="max-w-full truncate text-sm text-white/65 group-hover:text-white">{profile.name}</span></button>;
+            })}
+            <button onClick={() => setProfilesOpen(true)} className="group flex flex-col items-center gap-3 rounded-2xl p-3 transition hover:bg-white/[0.04]"><span className="grid size-24 place-items-center rounded-2xl border border-dashed border-white/20 bg-white/[0.03] text-3xl font-light text-white/45 transition group-hover:border-blue-400 group-hover:text-blue-300 sm:size-28">+</span><span className="text-sm text-white/45 group-hover:text-white">Ajouter</span></button>
           </div>
+          <button onClick={() => navigateTo("/choose-profile")} className="mt-12 rounded-lg bg-blue-500 px-6 py-3.5 text-sm text-white transition hover:bg-blue-400">Choisir un profil</button>
         </section>
 
-        <section className="border-t border-slate-200 py-20 sm:py-28">
-          <div className="grid gap-12 lg:grid-cols-[0.7fr_1.3fr] lg:items-end">
-            <div><p className="text-xs font-medium uppercase tracking-[0.14em] text-blue-600">Le parcours</p><h2 className="mt-4 text-3xl font-medium tracking-[-0.05em] sm:text-4xl">Trois étapes, puis tu n&apos;y penses plus.</h2></div>
-            <div className="grid gap-7 sm:grid-cols-3 sm:gap-4">
-              {landingSteps.map(([number, title, description]) => (
-                <div key={number} className="border-t border-slate-200 pt-4"><p className="text-xs text-blue-600">{number}</p><h3 className="mt-4 text-sm font-medium">{title}</h3><p className="mt-2 text-xs leading-5 text-slate-500">{description}</p></div>
-              ))}
-            </div>
-          </div>
-        </section>
-
-        <section className="border-t border-slate-200 py-20 sm:py-28">
-          <div className="max-w-2xl"><p className="text-xs font-medium uppercase tracking-[0.14em] text-blue-600">Prêt à lancer la veille</p><h2 className="mt-4 text-4xl font-medium tracking-[-0.055em] sm:text-5xl">Tes recherches méritent mieux qu&apos;un refresh manuel.</h2><p className="mt-5 text-base leading-7 text-slate-500">Crée un profil Telegram, arme une alerte, et laisse ton serveur faire le reste.</p></div>
-          <button onClick={() => navigateTo("/dashboard")} className="mt-8 rounded-xl bg-blue-600 px-5 py-3.5 text-sm font-medium text-white shadow-lg shadow-blue-600/15 transition hover:bg-blue-700">Accéder au dashboard</button>
-        </section>
-
-        <footer className="flex flex-col gap-3 border-t border-slate-200 py-8 text-xs text-slate-400 sm:flex-row sm:items-center sm:justify-between"><span>Friply · ton système de veille local</span><button onClick={() => navigateTo("/profiles")} className="text-left text-slate-500 transition hover:text-blue-600">Gérer les profils Telegram</button></footer>
+        <TelegramProfilesModal open={profilesOpen} profiles={profiles} activeProfileId={null} onSelect={(id) => navigateTo(`/dashboard?profileId=${encodeURIComponent(id ?? "")}`)} onCreate={createProfile} onTest={testProfile} onDelete={deleteProfile} onClose={() => setProfilesOpen(false)} />
       </div>
     </main>
   );
@@ -1237,10 +1210,10 @@ function ProfilesPage() {
   }
 
   return (
-    <div className="profiles-shell min-h-screen bg-slate-100">
+    <div className="profiles-shell min-h-screen bg-[#080b12] text-white">
       <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-5">
         <button onClick={() => navigateTo("/")} className="text-sm font-medium tracking-[-0.03em] text-slate-800">Friply</button>
-        <button onClick={() => navigateTo("/choose-profile")} className="rounded-xl bg-blue-600 px-4 py-2 text-xs font-bold text-white hover:bg-blue-700">Ouvrir mon radar</button>
+        <button onClick={() => navigateTo("/choose-profile")} className="rounded-xl bg-blue-600 px-4 py-2 text-xs font-bold text-white hover:bg-blue-700">Ouvrir</button>
       </div>
       <TelegramProfilesModal
         open
