@@ -1,5 +1,28 @@
+import { useState } from "react";
 import { SearchItem } from "../types";
 import { cx, fmtPrice } from "../utils";
+
+function ProductImage({ src, alt, className }: { src?: string | null; alt: string; className?: string }) {
+  const [loaded, setLoaded] = useState(false);
+  const [failed, setFailed] = useState(false);
+  const showImage = Boolean(src) && !failed;
+
+  return (
+    <div className="relative h-full w-full overflow-hidden bg-slate-200">
+      <div className={cx("absolute inset-0 animate-pulse bg-[linear-gradient(110deg,#e2e8f0_8%,#f8fafc_18%,#e2e8f0_33%)] bg-[length:200%_100%]", loaded && "opacity-0")} />
+      {showImage ? (
+        <img
+          src={src ?? undefined}
+          alt={alt}
+          className={cx("relative h-full w-full object-cover opacity-0 transition-opacity duration-300", loaded && "opacity-100", className)}
+          loading="lazy"
+          onLoad={() => setLoaded(true)}
+          onError={() => setFailed(true)}
+        />
+      ) : null}
+    </div>
+  );
+}
 
 interface ItemCardProps {
   item: SearchItem;
@@ -26,16 +49,7 @@ export function ItemCard({ item, layout, hot, selected, onHover, onClick }: Item
       >
         <div className="relative overflow-hidden rounded-lg bg-slate-100 sm:rounded-2xl sm:shadow-inner">
           <div className="aspect-[3/4] w-full sm:aspect-[4/5]">
-            {item.imageUrl ? (
-              <img
-                src={item.imageUrl}
-                alt={item.title}
-                className="h-full w-full object-cover transition-transform duration-500 ease-out group-hover:scale-110"
-                loading="lazy"
-              />
-            ) : (
-              <div className="h-full w-full animate-pulse bg-slate-200" />
-            )}
+            <ProductImage src={item.imageUrl} alt={item.title} className="transition-transform duration-500 ease-out group-hover:scale-110" />
           </div>
           
           <div className="pointer-events-none absolute left-2 top-2 flex gap-2 sm:left-3 sm:top-3">
@@ -92,16 +106,7 @@ export function ItemCard({ item, layout, hot, selected, onHover, onClick }: Item
       onClick={() => onClick(item)}
     >
       <div className="h-16 w-16 overflow-hidden rounded-xl bg-slate-100 shadow-inner">
-        {item.imageUrl ? (
-          <img
-            src={item.imageUrl}
-            alt={item.title}
-            className="h-full w-full object-cover transition-transform duration-500 ease-out group-hover:scale-110"
-            loading="lazy"
-          />
-        ) : (
-          <div className="h-full w-full animate-pulse bg-slate-200" />
-        )}
+        <ProductImage src={item.imageUrl} alt={item.title} className="transition-transform duration-500 ease-out group-hover:scale-110" />
       </div>
 
       <div className="min-w-0 py-1">
