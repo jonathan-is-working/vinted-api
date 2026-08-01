@@ -58,6 +58,15 @@ const telegramProfiles =
   env.ALERTS_STORE === "postgres" ? new TelegramProfilesRepo(alertsStore.pool) : null;
 if (telegramProfiles) await telegramProfiles.migrate();
 
+if (telegramProfiles && env.TELEGRAM_BOT_TOKEN && env.TELEGRAM_CHAT_ID) {
+  const envProfile = await telegramProfiles.ensureFromEnv({
+    name: "Jonathan",
+    botToken: env.TELEGRAM_BOT_TOKEN,
+    chatId: env.TELEGRAM_CHAT_ID
+  });
+  await telegramProfiles.assignUnprofiledAlerts(envProfile.id);
+}
+
 const telegram =
   env.TELEGRAM_BOT_TOKEN && env.TELEGRAM_CHAT_ID
     ? new TelegramNotifier({ botToken: env.TELEGRAM_BOT_TOKEN, chatId: env.TELEGRAM_CHAT_ID })

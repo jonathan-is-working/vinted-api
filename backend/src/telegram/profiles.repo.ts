@@ -62,6 +62,35 @@ export class TelegramProfilesRepo {
     return profile;
   }
 
+  async ensureFromEnv(input: CreateTelegramProfile): Promise<TelegramProfile> {
+    const existing = await this.pool.query(
+      `SELECT id, name, bot_token, chat_id, created_at, updated_at
+       FROM telegram_profiles WHERE name = $1 ORDER BY created_at ASC LIMIT 1`,
+      [input.name]
+    );
+    const now = Date.now();
+    if (existing.rows[0]) {
+      const row = existing.rows[0];
+      await this.pool.query(
+        `UPDATE telegram_profiles
+         SET bot_token = $2, chat_id = $3, updated_at = $4
+         WHERE id = $1`,
+        [row.id, input.botToken, input.chatId, now]
+      );
+      return this.map({ ...row, bot_token: input.botToken, chat_id: input.chatId, updated_at: now });
+    }
+
+    return this.create(input);
+  }
+
+  async assignUnprofiledAlerts(profileId: string): Promise<void> {
+    await this.pool.query(
+      `UPDATE alerts SET telegram_profile_id = $1, updated_at = $2
+       WHERE telegram_profile_id IS NULL`,
+      [profileId, Date.now()]
+    );
+  }
+
   async delete(id: string): Promise<boolean> {
     const res = await this.pool.query(`DELETE FROM telegram_profiles WHERE id = $1`, [id]);
     return (res.rowCount ?? 0) > 0;
