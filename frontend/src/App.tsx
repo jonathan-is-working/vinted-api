@@ -1161,7 +1161,6 @@ function LandingPage() {
       <div className="mx-auto flex min-h-screen max-w-5xl flex-col px-5 sm:px-8">
         <header className="flex items-center justify-between border-b border-white/[0.08] py-5">
           <button onClick={() => navigateTo("/")} className="text-sm font-medium tracking-[-0.04em]">Friply</button>
-          <button onClick={() => navigateTo("/profiles")} className="text-xs text-white/45 transition hover:text-white">Gérer</button>
         </header>
 
         <section className="flex flex-1 flex-col items-center justify-center py-16 text-center sm:py-24">
@@ -1174,7 +1173,6 @@ function LandingPage() {
             })}
             <button onClick={() => setProfilesOpen(true)} className="group flex flex-col items-center gap-3 rounded-2xl p-3 transition hover:bg-white/[0.04]"><span className="grid size-24 place-items-center rounded-2xl border border-dashed border-white/20 bg-white/[0.03] text-3xl font-light text-white/45 transition group-hover:border-blue-400 group-hover:text-blue-300 sm:size-28">+</span><span className="text-sm text-white/45 group-hover:text-white">Ajouter</span></button>
           </div>
-          <button onClick={() => navigateTo("/choose-profile")} className="mt-12 rounded-lg bg-blue-500 px-6 py-3.5 text-sm text-white transition hover:bg-blue-400">Choisir un profil</button>
         </section>
 
         <TelegramProfilesModal open={profilesOpen} profiles={profiles} activeProfileId={null} onSelect={(id) => navigateTo(`/dashboard?profileId=${encodeURIComponent(id ?? "")}`)} onCreate={createProfile} onTest={testProfile} onDelete={deleteProfile} onClose={() => setProfilesOpen(false)} />
