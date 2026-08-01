@@ -26,7 +26,7 @@ function looksLikeTopLevelCatalog(title: string) {
 
 function Badge({ children }: { children: React.ReactNode }) {
   return (
-    <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-bold text-emerald-900">
+    <span className="rounded-full bg-blue-100 px-2 py-0.5 text-[10px] font-bold text-blue-900">
       {children}
     </span>
   );
@@ -123,7 +123,7 @@ function FacetList({
             key={o.id}
             className={cx(
               "rounded-xl border px-3 py-2 text-left transition",
-              picked ? "border-emerald-300 bg-emerald-50/70" : "border-slate-200/60 bg-white/70 hover:bg-white"
+              picked ? "border-blue-300 bg-blue-50/70" : "border-slate-200/60 bg-white/70 hover:bg-white"
             )}
             onClick={() => onToggle({ id: o.id, title: o.title })}
             title={o.title}
@@ -132,7 +132,7 @@ function FacetList({
               <div
                 className={cx(
                   "mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded border",
-                  picked ? "border-emerald-500 bg-emerald-500 text-white" : "border-slate-300 bg-slate-50"
+                  picked ? "border-blue-500 bg-blue-500 text-white" : "border-slate-300 bg-slate-50"
                 )}
               >
                 {picked ? <Icon name="check" className="text-[12px]" /> : null}
@@ -246,9 +246,9 @@ export function FiltersModal(props: {
         className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm"
         onClick={props.onClose}
       />
-      <div className="absolute inset-x-0 top-6 mx-auto w-[min(980px,calc(100vw-24px))]">
-        <div className="rounded-3xl border border-white/30 bg-white/70 shadow-2xl backdrop-blur-xl">
-          <div className="flex items-center justify-between gap-3 px-6 py-5 border-b border-white/40">
+      <div className="absolute inset-x-0 bottom-0 mx-auto w-full sm:bottom-auto sm:top-6 sm:w-[min(980px,calc(100vw-24px))]">
+        <div className="max-h-[90dvh] rounded-t-3xl border border-white/30 bg-white/90 shadow-2xl backdrop-blur-xl sm:rounded-3xl sm:bg-white/70">
+          <div className="flex items-center justify-between gap-3 px-4 py-4 border-b border-white/40 sm:px-6 sm:py-5">
             <div className="flex items-center gap-3">
               <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-slate-900 text-white shadow-md">
                 <Icon name="tune" className="text-[22px]" />
@@ -269,7 +269,7 @@ export function FiltersModal(props: {
             </button>
           </div>
 
-          <div className="max-h-[calc(100vh-140px)] overflow-y-auto p-6 custom-scrollbar">
+          <div className="max-h-[calc(90dvh-80px)] overflow-y-auto p-4 custom-scrollbar sm:max-h-[calc(100vh-140px)] sm:p-6">
             <div className="grid gap-4 md:grid-cols-2">
               <Section title="Core" icon="tune" defaultOpen>
                 <div className="space-y-3">
@@ -279,7 +279,7 @@ export function FiltersModal(props: {
                         Sort
                       </label>
                       <select
-                        className="mt-1 w-full rounded-xl border border-slate-200 bg-white/80 px-3 py-2 text-[12px] font-semibold text-slate-800 outline-none focus:border-emerald-400 focus:ring-4 focus:ring-emerald-50 transition-all"
+                        className="mt-1 w-full rounded-xl border border-slate-200 bg-white/80 px-3 py-2 text-[12px] font-semibold text-slate-800 outline-none focus:border-blue-400 focus:ring-4 focus:ring-blue-50 transition-all"
                         value={props.sort}
                         onChange={(e) => props.setSort(e.target.value)}
                       >
@@ -294,7 +294,7 @@ export function FiltersModal(props: {
                         Currency
                       </label>
                       <select
-                        className="mt-1 w-full rounded-xl border border-slate-200 bg-white/80 px-3 py-2 text-[12px] font-semibold text-slate-800 outline-none focus:border-emerald-400 focus:ring-4 focus:ring-emerald-50 transition-all"
+                        className="mt-1 w-full rounded-xl border border-slate-200 bg-white/80 px-3 py-2 text-[12px] font-semibold text-slate-800 outline-none focus:border-blue-400 focus:ring-4 focus:ring-blue-50 transition-all"
                         value={props.currency}
                         onChange={(e) => props.setCurrency(e.target.value)}
                       >
@@ -309,7 +309,7 @@ export function FiltersModal(props: {
                         Min €
                       </label>
                       <input
-                        className="mt-1 w-full rounded-xl border border-slate-200 bg-white/80 px-3 py-2 text-[12px] font-semibold text-slate-800 outline-none focus:border-emerald-400 focus:ring-4 focus:ring-emerald-50 transition-all"
+                        className="mt-1 w-full rounded-xl border border-slate-200 bg-white/80 px-3 py-2 text-[12px] font-semibold text-slate-800 outline-none focus:border-blue-400 focus:ring-4 focus:ring-blue-50 transition-all"
                         value={props.priceMin}
                         onChange={(e) => props.setPriceMin(e.target.value)}
                         inputMode="decimal"
@@ -321,7 +321,7 @@ export function FiltersModal(props: {
                         Max €
                       </label>
                       <input
-                        className="mt-1 w-full rounded-xl border border-slate-200 bg-white/80 px-3 py-2 text-[12px] font-semibold text-slate-800 outline-none focus:border-emerald-400 focus:ring-4 focus:ring-emerald-50 transition-all"
+                        className="mt-1 w-full rounded-xl border border-slate-200 bg-white/80 px-3 py-2 text-[12px] font-semibold text-slate-800 outline-none focus:border-blue-400 focus:ring-4 focus:ring-blue-50 transition-all"
                         value={props.priceMax}
                         onChange={(e) => props.setPriceMax(e.target.value)}
                         inputMode="decimal"
@@ -335,7 +335,7 @@ export function FiltersModal(props: {
                       Category
                     </label>
                     <select
-                      className="mt-1 w-full rounded-xl border border-slate-200 bg-white/80 px-3 py-2 text-[12px] font-semibold text-slate-800 outline-none focus:border-emerald-400 focus:ring-4 focus:ring-emerald-50 transition-all"
+                      className="mt-1 w-full rounded-xl border border-slate-200 bg-white/80 px-3 py-2 text-[12px] font-semibold text-slate-800 outline-none focus:border-blue-400 focus:ring-4 focus:ring-blue-50 transition-all"
                       value={props.categoryId}
                       onChange={(e) => props.setCategoryId(e.target.value)}
                     >
@@ -609,7 +609,7 @@ export function FiltersModal(props: {
                         className={cx(
                           "rounded-xl border px-3 py-2 text-left transition",
                           picked
-                            ? "border-emerald-300 bg-emerald-50/70"
+                            ? "border-blue-300 bg-blue-50/70"
                             : "border-slate-200/60 bg-white/70 hover:bg-white"
                         )}
                         onClick={() =>
@@ -621,7 +621,7 @@ export function FiltersModal(props: {
                             className={cx(
                               "mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded border",
                               picked
-                                ? "border-emerald-500 bg-emerald-500 text-white"
+                                ? "border-blue-500 bg-blue-500 text-white"
                                 : "border-slate-300 bg-slate-50"
                             )}
                           >
@@ -693,8 +693,8 @@ export function FiltersModal(props: {
             {props.primaryAction ? (
               <button
                 className={cx(
-                  "rounded-2xl bg-emerald-600 px-5 py-2.5 text-sm font-bold text-white shadow-md transition-all",
-                  props.primaryAction.disabled ? "opacity-50 cursor-not-allowed" : "hover:bg-emerald-700"
+                  "rounded-2xl bg-blue-600 px-5 py-2.5 text-sm font-bold text-white shadow-md transition-all",
+                  props.primaryAction.disabled ? "opacity-50 cursor-not-allowed" : "hover:bg-blue-700"
                 )}
                 disabled={props.primaryAction.disabled}
                 onClick={props.primaryAction.onClick}

@@ -42,10 +42,16 @@ export class NotificationsRepo {
         ON notifications(created_at DESC);
 
       CREATE TABLE IF NOT EXISTS telegram_notified_items (
-        item_id BIGINT PRIMARY KEY,
+        item_id BIGINT NOT NULL,
+        profile_id TEXT NOT NULL DEFAULT '',
         notification_id TEXT NULL REFERENCES notifications(id) ON DELETE SET NULL,
-        created_at BIGINT NOT NULL
+        created_at BIGINT NOT NULL,
+        PRIMARY KEY (item_id, profile_id)
       );
+
+      ALTER TABLE telegram_notified_items ADD COLUMN IF NOT EXISTS profile_id TEXT NOT NULL DEFAULT '';
+      ALTER TABLE telegram_notified_items DROP CONSTRAINT IF EXISTS telegram_notified_items_pkey;
+      ALTER TABLE telegram_notified_items ADD CONSTRAINT telegram_notified_items_pkey PRIMARY KEY (item_id, profile_id);
 
       -- Back-compat: older installs won't have the telegram column
       ALTER TABLE notifications ADD COLUMN IF NOT EXISTS telegram_message_id BIGINT NULL;
@@ -168,12 +174,12 @@ export class NotificationsRepo {
     );
   }
 
-  async claimTelegramItem(itemId: number, notificationId?: string): Promise<boolean> {
+  async claimTelegramItem(itemId: number, notificationId?: string, profileId?: string | null): Promise<boolean> {
     const res = await this.pool.query(
-      `INSERT INTO telegram_notified_items (item_id, notification_id, created_at)
-       VALUES ($1, $2, $3)
-       ON CONFLICT (item_id) DO NOTHING`,
-      [itemId, notificationId ?? null, Date.now()]
+      `INSERT INTO telegram_notified_items (item_id, profile_id, notification_id, created_at)
+       VALUES ($1, $2, $3, $4)
+       ON CONFLICT (item_id, profile_id) DO NOTHING`,
+      [itemId, profileId ?? "", notificationId ?? null, Date.now()]
     );
     return (res.rowCount ?? 0) > 0;
   }

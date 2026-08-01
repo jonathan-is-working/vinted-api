@@ -1,4 +1,4 @@
-# Vinted Search Proxy (Foundation)
+# Friply
 
 Production-ready starter for a proxy API in front of Vinted’s internal search, plus a minimal UI to validate the end-to-end flow.
 
@@ -28,13 +28,79 @@ Persistence:
 
 - Alerts are stored in Postgres by default (`ALERTS_STORE=postgres`, `DATABASE_URL=...`).
 
-Telegram notifications (optional):
-- Set `TELEGRAM_BOT_TOKEN` and `TELEGRAM_CHAT_ID` to receive a Telegram message for each new item (alerts + live query).
-- Test quickly: `curl -X POST http://localhost:3000/v1/admin/telegram/test -H 'content-type: application/json' -d '{"text":"ping"}'`
-- Resend missed notifications from the last 3 hours: `./scripts/resend-missed.sh 3`. It previews the pending count, then asks for confirmation. Use `--dry-run` to only inspect, or `--yes` for unattended execution.
-- On Arch Linux, install the system-wide NetworkManager recovery cron with `sudo ./scripts/install-network-reconnect.sh`. It checks Internet and Telegram DNS every five minutes and reconnects disconnected interfaces when needed.
-- Optional commands (polling): set `TELEGRAM_ENABLE_COMMANDS=true`. Then send `/clear` (or `/clear 100`) to delete the last bot messages (best-effort).
-- Commands: `/help`, `/ping`, `/status`, `/alerts`, `/clear [n]`.
+## Telegram setup
+
+Telegram is optional. The app sends new-item notifications for saved alerts and live query feeds to one configured Telegram chat.
+
+### 1. Create the bot
+
+1. Open Telegram and search for `@BotFather`.
+2. Send `/newbot` and follow the prompts.
+3. Copy the bot token returned by BotFather. Keep it secret; anyone with this token can control the bot.
+4. Open a chat with the new bot and send `/start` (or any message).
+
+### 2. Find the chat ID
+
+With the bot token, query Telegram for updates:
+
+```bash
+curl "https://api.telegram.org/bot<TELEGRAM_BOT_TOKEN>/getUpdates"
+```
+
+Copy `result[].message.chat.id` into `TELEGRAM_CHAT_ID`. For a group, add the bot to the group and send a message there first; group IDs are usually negative.
+
+### 3. Configure the app
+
+Add these variables to the root `.env` file used by Docker Compose:
+
+```env
+TELEGRAM_BOT_TOKEN=<token from BotFather>
+TELEGRAM_CHAT_ID=<your chat ID>
+TELEGRAM_ENABLE_COMMANDS=true
+TELEGRAM_CLEAR_LIMIT=50
+```
+
+Restart the backend so it loads the variables:
+
+```bash
+docker compose up -d --build backend
+```
+
+Test the connection:
+
+```bash
+curl -X POST http://localhost:3000/v1/admin/telegram/test \
+  -H 'content-type: application/json' \
+  -d '{"text":"Telegram connected"}'
+```
+
+Available bot commands when `TELEGRAM_ENABLE_COMMANDS=true`:
+
+- `/help` — list commands.
+- `/ping` — test bot connectivity.
+- `/status` — show the Vinted session status.
+- `/alerts` — list saved alerts.
+- `/clear [n]` — delete the last `n` bot messages, best effort.
+
+### Telegram security and profiles
+
+The app supports local Telegram profiles for per-alert routing. It still has one shared alerts database and one local management UI. The legacy global `TELEGRAM_BOT_TOKEN`/`TELEGRAM_CHAT_ID` configuration remains available as a fallback for alerts without a selected profile.
+
+Therefore, do not give the current instance to several unrelated users: they would share the same alerts and could access the unauthenticated API. To support separate users today, run one isolated deployment per user with a separate `.env`, database, bot/chat configuration, and ideally separate host/API access.
+
+### Local multi-profile mode
+
+The UI now includes a `Telegram` button for local profile management. This is intended for an owner-hosted server: friends do not need access to the UI or API.
+
+For each friend:
+
+1. They create their own bot with `@BotFather` using `/newbot`.
+2. They open the bot and send `/start`.
+3. They call `https://api.telegram.org/bot<TOKEN>/getUpdates` and send you the value of `result[].message.chat.id`.
+4. You create a profile in the UI and enter their name, bot token, and chat ID.
+5. Select that profile before creating/arming their alert, then use `Tester` to verify delivery.
+
+The alert stores its selected profile, so matching items are routed to that profile's bot. The bot token is stored by the local backend and is only returned to the UI in masked form. Keep the server and API bound to localhost or protect them with a private network/authentication before exposing them outside your machine.
 
 Performance notes:
 - Alerts + Live Query use a fast path to emit new items ASAP (no fill-to-perPage scanning; Telegram sends are non-blocking).

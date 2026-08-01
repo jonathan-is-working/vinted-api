@@ -15,6 +15,8 @@ import { registerNotificationsRoutes } from "../notifications/notifications.rout
 import { type NotificationsRepo } from "../notifications/notifications.repo.js";
 import { registerTelegramRoutes } from "./telegram.routes.js";
 import { type TelegramNotifier } from "../integrations/telegram/telegram.notifier.js";
+import { registerTelegramProfilesRoutes } from "./telegram-profiles.routes.js";
+import { type TelegramProfilesRepo } from "../telegram/profiles.repo.js";
 
 export async function registerV1Routes(
   app: FastifyInstance,
@@ -24,6 +26,7 @@ export async function registerV1Routes(
     liveSearch: LiveSearchService;
     notifications?: NotificationsRepo | null;
     telegram?: TelegramNotifier;
+    telegramProfiles?: TelegramProfilesRepo | null;
     sessions: VintedSessionManager;
     catalogService: CatalogService;
     itemService: ItemService;
@@ -50,6 +53,9 @@ export async function registerV1Routes(
         telegram: deps.telegram,
         notifications: deps.notifications ?? undefined
       });
+    }
+    if (deps.telegramProfiles) {
+      await registerTelegramProfilesRoutes(v1, { profiles: deps.telegramProfiles });
     }
     await registerUpstreamStatusRoutes(v1, { sessions: deps.sessions });
     await registerCatalogRoutes(v1, { catalogService: deps.catalogService });

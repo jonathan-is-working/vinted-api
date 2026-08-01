@@ -6,5 +6,6 @@ export type ItemNotifier = {
     sourceKey: string;
     item: SearchItem;
     sendPhoto?: boolean;
+    profileId?: string | null;
   }): Promise<number | null>;
 };

@@ -57,6 +57,7 @@ export type ItemDetails = {
 export type Alert = {
   id: string;
   name: string;
+  telegramProfileId: string | null;
   pollIntervalSeconds: number;
   createdAt: number;
   updatedAt: number;
@@ -91,6 +92,15 @@ export type Alert = {
     sizeIds75?: number[];
     sizeIds77?: number[];
   };
+};
+
+export type TelegramProfile = {
+  id: string;
+  name: string;
+  chatId: string;
+  botTokenMasked: string;
+  createdAt: number;
+  updatedAt: number;
 };
 
 export type AlertEvent = {

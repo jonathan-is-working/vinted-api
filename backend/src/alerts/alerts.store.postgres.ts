@@ -6,13 +6,14 @@ export class PostgresAlertsStore {
 
   async listAlerts(): Promise<Alert[]> {
     const res = await this.pool.query(
-      `SELECT id, name, query_json, poll_interval_seconds, created_at, updated_at, last_run_at, last_error, enabled
+      `SELECT id, name, telegram_profile_id, query_json, poll_interval_seconds, created_at, updated_at, last_run_at, last_error, enabled
        FROM alerts
        ORDER BY created_at DESC`
     );
     return res.rows.map((r: any) => ({
       id: r.id,
       name: r.name,
+      telegramProfileId: r.telegram_profile_id ?? null,
       query: r.query_json,
       pollIntervalSeconds: r.poll_interval_seconds,
       createdAt: Number(r.created_at),
@@ -25,7 +26,7 @@ export class PostgresAlertsStore {
 
   async getAlert(id: string): Promise<Alert | null> {
     const res = await this.pool.query(
-      `SELECT id, name, query_json, poll_interval_seconds, created_at, updated_at, last_run_at, last_error, enabled
+      `SELECT id, name, telegram_profile_id, query_json, poll_interval_seconds, created_at, updated_at, last_run_at, last_error, enabled
        FROM alerts
        WHERE id = $1`,
       [id]
@@ -35,6 +36,7 @@ export class PostgresAlertsStore {
     return {
       id: r.id,
       name: r.name,
+      telegramProfileId: r.telegram_profile_id ?? null,
       query: r.query_json,
       pollIntervalSeconds: r.poll_interval_seconds,
       createdAt: Number(r.created_at),
@@ -47,10 +49,11 @@ export class PostgresAlertsStore {
 
   async putAlert(alert: Alert): Promise<void> {
     await this.pool.query(
-      `INSERT INTO alerts (id, name, query_json, poll_interval_seconds, created_at, updated_at, last_run_at, last_error, enabled)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)
+      `INSERT INTO alerts (id, name, telegram_profile_id, query_json, poll_interval_seconds, created_at, updated_at, last_run_at, last_error, enabled)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)
        ON CONFLICT (id) DO UPDATE SET
          name = EXCLUDED.name,
+         telegram_profile_id = EXCLUDED.telegram_profile_id,
          query_json = EXCLUDED.query_json,
          poll_interval_seconds = EXCLUDED.poll_interval_seconds,
          created_at = EXCLUDED.created_at,
@@ -61,6 +64,7 @@ export class PostgresAlertsStore {
       [
         alert.id,
         alert.name,
+        alert.telegramProfileId,
         alert.query,
         alert.pollIntervalSeconds,
         alert.createdAt,

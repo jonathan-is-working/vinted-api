@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React from "react";
 import { Alert } from "../types";
 import { cx } from "../utils";
 import { Icon, type IconName } from "./Icon";
@@ -16,7 +16,7 @@ interface SidebarProps {
   liveMode: "saved" | "query" | "monitors";
   selectMonitors: () => void;
   armedAlertIds: string[];
-  toggleAlertEnabled: (id: string, enabled: boolean) => void;
+  setArmedAlertIds: React.Dispatch<React.SetStateAction<string[]>>;
   streamError: string | null;
   deleteAlert: (id: string) => void;
   onEditAlert: (id: string) => void;
@@ -24,7 +24,7 @@ interface SidebarProps {
 
 function Badge({ children }: { children: React.ReactNode }) {
   return (
-    <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-bold text-emerald-900">
+    <span className="rounded-full bg-blue-100 px-2 py-0.5 text-[10px] font-bold text-blue-900">
       {children}
     </span>
   );
@@ -118,24 +118,25 @@ export function Sidebar(props: SidebarProps) {
     liveMode,
     selectMonitors,
     armedAlertIds,
-    toggleAlertEnabled,
+    setArmedAlertIds,
     streamError,
     deleteAlert,
     onEditAlert,
     // filters are now in a popup modal; keep sidebar clean
   } = props;
 
-  const [showArchived, setShowArchived] = useState(true);
-  const armedSet = useMemo(() => new Set(armedAlertIds), [armedAlertIds]);
-  const armedAlerts = useMemo(() => alerts.filter((a) => armedSet.has(a.id)), [alerts, armedSet]);
-  const archivedAlerts = useMemo(() => alerts.filter((a) => !armedSet.has(a.id)), [alerts, armedSet]);
-
   if (!open) return null;
 
   return (
-    <aside className="flex h-full w-[340px] shrink-0 flex-col overflow-x-hidden border-r border-neutral-200 bg-white/92 backdrop-blur-xl shadow-[4px_0_24px_rgba(0,0,0,0.02)] transition-all z-20">
-      <div className="flex items-center justify-between gap-3 px-6 py-5 border-b border-slate-200/50">
-        <div className="text-[14px] font-bold text-slate-800">Saved Searches</div>
+    <>
+      <button
+        className="fixed inset-0 z-30 bg-slate-950/20 lg:hidden"
+        aria-label="Fermer les alertes"
+        onClick={() => setOpen(false)}
+      />
+      <aside className="fixed inset-y-0 left-0 z-40 flex w-[min(340px,calc(100vw-24px))] flex-col overflow-x-hidden border-r border-slate-200 bg-white shadow-2xl transition-transform lg:static lg:z-20 lg:h-full lg:w-[320px] lg:shrink-0 lg:bg-white/80 lg:shadow-[4px_0_24px_rgba(15,23,42,0.03)] lg:backdrop-blur-xl">
+      <div className="flex items-center justify-between gap-3 border-b border-slate-200 px-5 py-4">
+        <div><div className="text-sm font-semibold tracking-[-0.03em] text-slate-900">Friply</div><div className="mt-0.5 text-[10px] font-medium uppercase tracking-[0.12em] text-slate-400">Mes alertes</div></div>
         <button
           className="flex h-8 w-8 items-center justify-center rounded-full hover:bg-slate-100 text-slate-500 transition-colors"
           onClick={() => setOpen(false)}
@@ -147,7 +148,7 @@ export function Sidebar(props: SidebarProps) {
 
       <div className="flex-1 overflow-y-auto overflow-x-hidden px-4 py-4 custom-scrollbar space-y-3">
         <Section
-          title="Alerts"
+          title="Saved Searches"
           icon="bookmark"
           defaultOpen
           badge={alerts.length ? <Badge>{alerts.length}</Badge> : undefined}
@@ -157,7 +158,7 @@ export function Sidebar(props: SidebarProps) {
               className={cx(
                 "group flex w-full items-center gap-3 rounded-xl border px-3 py-2 text-left transition",
                 liveMode === "monitors"
-                  ? "border-emerald-300 bg-emerald-50/70"
+                  ? "border-blue-300 bg-blue-50/70"
                   : "border-slate-200/60 bg-white/70 hover:bg-white"
               )}
               onClick={selectMonitors}
@@ -166,11 +167,11 @@ export function Sidebar(props: SidebarProps) {
               <div
                 className={cx(
                   "h-2 w-2 rounded-full",
-                  liveMode === "monitors" ? "bg-emerald-500" : "bg-slate-300 group-hover:bg-slate-400"
+                  liveMode === "monitors" ? "bg-blue-500" : "bg-slate-300 group-hover:bg-slate-400"
                 )}
               />
               <div className="min-w-0 flex-1">
-                <div className="truncate text-[12px] font-bold text-slate-900">Live feed from armed alerts</div>
+                <div className="truncate text-[12px] font-bold text-slate-900">Armed alerts</div>
                 <div className="mt-0.5 truncate text-[10px] text-slate-500">
                   {armedAlertIds.length
                     ? `${armedAlertIds.length} armed • toggle ✓ to disarm`
@@ -182,25 +183,13 @@ export function Sidebar(props: SidebarProps) {
               </div>
             </button>
 
-            <div className="flex items-center justify-between rounded-full bg-[#dceeb1] px-2 py-1 text-[11px] font-semibold text-black">
-              <span>Armed {armedAlerts.length}</span>
-              <button
-                className="flex items-center gap-1 rounded-full border border-black/15 bg-white px-2 py-0.5 text-[10px] font-semibold text-black"
-                onClick={() => setShowArchived((v) => !v)}
-                title={showArchived ? `Hide archived (${archivedAlerts.length})` : `Show archived (${archivedAlerts.length})`}
-              >
-                <Icon name={showArchived ? "visibility_off" : "visibility"} className="text-[14px]" />
-                <span>{archivedAlerts.length}</span>
-              </button>
-            </div>
-
             {alertsLoading ? (
               <div className="animate-pulse space-y-2">
                 <div className="h-9 rounded-xl bg-slate-200/70" />
                 <div className="h-9 rounded-xl bg-slate-200/70" />
               </div>
             ) : alerts.length ? (
-              [...armedAlerts, ...(showArchived ? archivedAlerts : [])].map((a) => {
+              alerts.map((a) => {
                 const active = selectedAlertId === a.id;
                 const armed = armedAlertIds.includes(a.id);
                 return (
@@ -209,7 +198,7 @@ export function Sidebar(props: SidebarProps) {
                     className={cx(
                       "group flex w-full items-center gap-3 rounded-xl border px-3 py-2 text-left transition",
                       active
-                        ? "border-emerald-300 bg-emerald-50/70"
+                        ? "border-blue-300 bg-blue-50/70"
                         : "border-slate-200/60 bg-white/70 hover:bg-white"
                     )}
                     role="button"
@@ -226,13 +215,15 @@ export function Sidebar(props: SidebarProps) {
                       className={cx(
                         "flex h-6 w-6 items-center justify-center rounded-md border transition",
                         armed
-                          ? "border-emerald-400 bg-emerald-50 text-emerald-700"
+                          ? "border-blue-400 bg-blue-50 text-blue-700"
                           : "border-slate-200 bg-white/80 text-slate-400 hover:bg-white"
                       )}
                       title={armed ? "Disarm" : "Arm"}
                       onClick={(e) => {
                         e.stopPropagation();
-                        toggleAlertEnabled(a.id, !armed);
+                        setArmedAlertIds((prev) =>
+                          prev.includes(a.id) ? prev.filter((x) => x !== a.id) : [...prev, a.id]
+                        );
                       }}
                     >
                       <Icon name={armed ? "check" : "add"} className="text-[16px]" />
@@ -240,7 +231,7 @@ export function Sidebar(props: SidebarProps) {
                     <div
                       className={cx(
                         "h-2 w-2 rounded-full",
-                        active ? "bg-emerald-500" : "bg-slate-300 group-hover:bg-slate-400"
+                        active ? "bg-blue-500" : "bg-slate-300 group-hover:bg-slate-400"
                       )}
                     />
                     <div className="min-w-0 flex-1">
@@ -294,17 +285,16 @@ export function Sidebar(props: SidebarProps) {
             {armedAlertIds.length ? (
               <button
                 className="mt-1 w-full rounded-xl border border-slate-200/60 bg-white/70 px-3 py-2 text-left text-[12px] font-semibold text-slate-700 hover:bg-white transition"
-                onClick={() => {
-                  for (const id of armedAlertIds) toggleAlertEnabled(id, false);
-                }}
-                title="Disarm all alerts"
+                onClick={() => setArmedAlertIds([])}
+                title="Clear armed selection (will re-arm all on next reload if none are armed)"
               >
-                Disarm all alerts
+                Clear armed selection
               </button>
             ) : null}
           </div>
         </Section>
       </div>
-    </aside>
+      </aside>
+    </>
   );
 }

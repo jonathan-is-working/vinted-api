@@ -23,6 +23,8 @@ export async function migratePg(pool: PgPool): Promise<void> {
       last_error TEXT NULL
     );
 
+    ALTER TABLE alerts ADD COLUMN IF NOT EXISTS telegram_profile_id TEXT NULL;
+
     CREATE TABLE IF NOT EXISTS alert_events (
       id TEXT PRIMARY KEY,
       alert_id TEXT NOT NULL REFERENCES alerts(id) ON DELETE CASCADE,

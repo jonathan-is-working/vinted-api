@@ -47,6 +47,7 @@ export class AlertsService {
     const alert: Alert = {
       id: makeId(),
       name: input.name,
+      telegramProfileId: input.telegramProfileId ?? null,
       query: input.query,
       pollIntervalSeconds: input.pollIntervalSeconds,
       createdAt: t,
@@ -67,6 +68,7 @@ export class AlertsService {
     const next: Alert = {
       ...cur,
       name: input.name ?? cur.name,
+      telegramProfileId: input.telegramProfileId === undefined ? cur.telegramProfileId : input.telegramProfileId,
       query: input.query ?? cur.query,
       pollIntervalSeconds: input.pollIntervalSeconds ?? cur.pollIntervalSeconds,
       enabled: input.enabled ?? cur.enabled,
@@ -153,10 +155,10 @@ export class AlertsService {
           if (!createdId) continue;
 
           fresh.push(item);
-          if (this.notifier && (await this.notifications.claimTelegramItem(item.id, createdId))) {
+          if (this.notifier && (await this.notifications.claimTelegramItem(item.id, createdId, alert.telegramProfileId))) {
             try {
               void this.notifier
-                .notifyNewItem({ sourceType: "alert", sourceKey: alertId, item })
+                .notifyNewItem({ sourceType: "alert", sourceKey: alertId, item, profileId: alert.telegramProfileId })
                 .then((messageId) => {
                   if (typeof messageId === "number") {
                     void this.notifications!.setTelegramMessageId(createdId, messageId);

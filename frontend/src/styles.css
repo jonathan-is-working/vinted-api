@@ -2,19 +2,28 @@
 
 @layer base {
   body {
-    font-family: "Montserrat", "Inter", "Segoe UI", "Helvetica Neue", Arial, sans-serif;
-    @apply bg-white text-emerald-950 antialiased;
-    background-image: 
-      linear-gradient(to right, rgba(15, 23, 42, 0.06) 1px, transparent 1px),
-      linear-gradient(to bottom, rgba(15, 23, 42, 0.06) 1px, transparent 1px);
-    background-size: 28px 28px, 28px 28px;
+    font-family: "Montserrat", ui-sans-serif, system-ui, sans-serif;
+    @apply bg-slate-50 text-slate-900 antialiased;
+    background-image: radial-gradient(circle at 85% 0%, rgba(59, 130, 246, 0.10), transparent 30%);
     background-attachment: fixed;
     min-height: 100vh;
   }
 
-  /* Monospace only for technical inline elements */
-  kbd, code, pre, .font-mono {
+  /* Monospace fallback for specific elements */
+  kbd, code, .font-mono {
     font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  }
+}
+
+@layer components {
+  .landing-shell,
+  .dashboard-shell,
+  .profiles-shell {
+    font-family: "Montserrat", ui-sans-serif, system-ui, sans-serif;
+  }
+
+  .dashboard-shell {
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.72), rgba(248, 250, 252, 0.88));
   }
 }
 
@@ -27,9 +36,9 @@
     background: transparent;
   }
   .custom-scrollbar::-webkit-scrollbar-thumb {
-    @apply bg-emerald-300 rounded-full;
+    @apply bg-slate-300 rounded-full;
   }
   .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-    @apply bg-emerald-400;
+    @apply bg-slate-400;
   }
 }

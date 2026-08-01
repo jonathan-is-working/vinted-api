@@ -6,6 +6,8 @@ import { InspectorDrawer } from "./components/InspectorDrawer";
 import { SkeletonRow } from "./components/SkeletonRow";
 import { Icon } from "./components/Icon";
 import { FiltersModal } from "./components/FiltersModal";
+import { TelegramProfilesModal } from "./components/TelegramProfilesModal";
+import { VintedUrlModal } from "./components/VintedUrlModal";
 import { api, API_BASE_URL } from "./api";
 import { SIZE_PRESETS } from "./sizePresets";
 import {
@@ -18,16 +20,16 @@ import {
   CatalogFacetResponse,
   ItemDetails,
   Alert,
-  AlertEvent
+  AlertEvent,
+  TelegramProfile
 } from "./types";
 
-export default function App() {
+function DashboardApp() {
   const [activeView, setActiveView] = useState<"live" | "search">("live");
-  const [sidebarOpen, setSidebarOpen] = useState(true);
-  const [inspectorOpen, setInspectorOpen] = useState(true);
-  const [layout, setLayout] = useState<"list" | "cards">("cards");
-  const [liveMode, setLiveMode] = useState<"saved" | "query" | "monitors">("monitors");
+  const [sidebarOpen, setSidebarOpen] = useState(() => window.innerWidth >= 1024);
+  const [liveMode, setLiveMode] = useState<"saved" | "query" | "monitors">("saved");
   const [filtersOpen, setFiltersOpen] = useState(false);
+  const [vintedUrlOpen, setVintedUrlOpen] = useState(false);
   const [editingAlertId, setEditingAlertId] = useState<string | null>(null);
   const [toast, setToast] = useState<{ title: string; url: string } | null>(null);
   const toastTimer = useRef<number | null>(null);
@@ -76,10 +78,30 @@ export default function App() {
   const [error, setError] = useState<string | null>(null);
 
   const [alerts, setAlerts] = useState<Alert[]>([]);
+  const [telegramProfiles, setTelegramProfiles] = useState<TelegramProfile[]>([]);
+  const [activeProfileId, setActiveProfileId] = useState<string | null>(() =>
+    new URLSearchParams(window.location.search).get("profileId")
+  );
+  const [telegramProfilesOpen, setTelegramProfilesOpen] = useState(false);
   const [alertsLoading, setAlertsLoading] = useState(false);
   const [alertsError, setAlertsError] = useState<string | null>(null);
   const [selectedAlertId, setSelectedAlertId] = useState<string | null>(null);
-  const armedAlertIds = useMemo(() => alerts.filter((a) => a.enabled).map((a) => a.id), [alerts]);
+  const [armedInit] = useState(() => {
+    try {
+      return localStorage.getItem("armedAlertIds") != null;
+    } catch {
+      return false;
+    }
+  });
+  const [armedAlertIds, setArmedAlertIds] = useState<string[]>(() => {
+    try {
+      const raw = localStorage.getItem("armedAlertIds");
+      const parsed = raw ? (JSON.parse(raw) as unknown) : null;
+      return Array.isArray(parsed) ? parsed.filter((v) => typeof v === "string") : [];
+    } catch {
+      return [];
+    }
+  });
   const [streamItems, setStreamItems] = useState<SearchItem[]>([]);
   const [streamError, setStreamError] = useState<string | null>(null);
   const esRef = useRef<EventSource | null>(null);
@@ -90,18 +112,10 @@ export default function App() {
   const [details, setDetails] = useState<ItemDetails | null>(null);
   const [detailsLoading, setDetailsLoading] = useState(false);
   const [detailsError, setDetailsError] = useState<string | null>(null);
-  const [loadingMore, setLoadingMore] = useState(false);
-  const infiniteRef = useRef<HTMLDivElement | null>(null);
 
   const items = useMemo(() => {
     return activeView === "live" ? streamItems : data?.items ?? [];
   }, [activeView, data?.items, streamItems]);
-
-  const canNext = useMemo(() => {
-    if (!data) return false;
-    if (data.totalPages == null) return data.items.length > 0;
-    return data.page < data.totalPages;
-  }, [data]);
 
   const categoryOptions = useMemo(() => {
     const byParent = new Map<number | null, CatalogCategory[]>();
@@ -123,19 +137,6 @@ export default function App() {
     return out;
   }, [categories]);
 
-  // Size presets (women + men can be combined) are handled in the sidebar UI.
-
-  const activeFiltersLabel = useMemo(() => {
-    const parts: string[] = [];
-    if (sort !== "newest") parts.push(`sort:${sort}`);
-    if (categoryId) parts.push(`cat:${categoryId}`);
-    if (brandSelected.length) parts.push(`brands:${brandSelected.length}`);
-    if (statusSelected.length) parts.push(`status:${statusSelected.length}`);
-    if (priceMin.trim()) parts.push(`min€:${priceMin.trim()}`);
-    if (priceMax.trim()) parts.push(`max€:${priceMax.trim()}`);
-    return parts.join(" • ");
-  }, [brandSelected.length, categoryId, priceMax, priceMin, sort, statusSelected.length]);
-
   async function loadAlerts() {
     setAlertsLoading(true);
     setAlertsError(null);
@@ -143,10 +144,29 @@ export default function App() {
       const list = await api<Alert[]>("/v1/alerts");
       setAlerts(list);
       if (!selectedAlertId && list[0]?.id) setSelectedAlertId(list[0].id);
+      // Keep armed ids in-sync with existing alerts (prevents stale counts after DB reset / deletions).
+      setArmedAlertIds((prev) => {
+        const existing = new Set(list.map((a) => a.id));
+        const cleaned = prev.filter((id) => existing.has(id));
+        if (cleaned.length) return cleaned;
+        // Only auto-arm on the very first run (when there is no localStorage state yet).
+        if (!armedInit) return list.map((a) => a.id);
+        return [];
+      });
     } catch (e) {
       setAlertsError(e instanceof Error ? e.message : "Unknown error");
     } finally {
       setAlertsLoading(false);
+    }
+  }
+
+  async function loadTelegramProfiles() {
+    try {
+      const profiles = await api<TelegramProfile[]>("/v1/telegram-profiles");
+      setTelegramProfiles(profiles);
+      setActiveProfileId((current) => current && profiles.some((p) => p.id === current) ? current : profiles[0]?.id ?? null);
+    } catch {
+      setTelegramProfiles([]);
     }
   }
 
@@ -163,6 +183,7 @@ export default function App() {
   }
 
   function loadFiltersFromAlert(alert: Alert) {
+    setActiveProfileId(alert.telegramProfileId);
     setQ(alert.query?.q ?? "");
     setCurrency(alert.query?.currency ?? "EUR");
     setPerPage(alert.query?.perPage ?? 24);
@@ -196,15 +217,16 @@ export default function App() {
     setPriceMax(alert.query?.priceMax != null ? String((alert.query.priceMax / 100).toFixed(2)) : "");
   }
 
-  function importFiltersFromVintedUrl() {
-    const raw = window.prompt("Paste a Vinted catalog URL");
-    if (!raw) return;
+  function importFiltersFromVintedUrl(raw: string): string | null {
     let parsedUrl: URL;
     try {
       parsedUrl = new URL(raw.trim());
     } catch {
-      setError("Invalid URL");
-      return;
+      return "Entre une URL complète, par exemple https://www.vinted.fr/catalog?...";
+    }
+
+    if (!parsedUrl.hostname.endsWith("vinted.fr") || !parsedUrl.pathname.startsWith("/catalog")) {
+      return "Ce lien doit être une URL de catalogue Vinted France.";
     }
 
     const params = parsedUrl.searchParams;
@@ -278,6 +300,7 @@ export default function App() {
     setSizeSelectedMenPants(toOptions(sizeIds, SIZE_PRESETS.men_pants.options.reduce((a, o) => ({ ...a, [o.id]: o.title }), {} as Record<number, string>)));
 
     setFiltersOpen(true);
+    return null;
   }
 
   async function saveEditingAlert() {
@@ -290,6 +313,7 @@ export default function App() {
       method: "PATCH",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({
+        telegramProfileId: activeProfileId,
         query: {
           q: trimmed,
           perPage,
@@ -445,11 +469,10 @@ export default function App() {
     }
   }
 
-  async function runSearch(nextPage: number, append = false) {
+  async function runSearch(nextPage: number) {
     const trimmed = q.trim();
     if (!trimmed) return;
-    if (append) setLoadingMore(true);
-    else setLoading(true);
+    setLoading(true);
     setError(null);
     try {
       const url = new URL("/v1/search", API_BASE_URL);
@@ -490,13 +513,7 @@ export default function App() {
       const res = await fetch(url.toString());
       if (!res.ok) throw new Error(await res.text());
       const json = (await res.json()) as SearchResponse;
-      if (append && data) {
-        const seen = new Set(data.items.map((i) => i.id));
-        const merged = [...data.items, ...json.items.filter((i) => !seen.has(i.id))];
-        setData({ ...json, items: merged });
-      } else {
-        setData(json);
-      }
+      setData(json);
       setPage(json.page);
       setActiveView("search");
       setLastUpdatedAt(Date.now());
@@ -504,7 +521,6 @@ export default function App() {
       setError(e instanceof Error ? e.message : "Unknown error");
     } finally {
       setLoading(false);
-      setLoadingMore(false);
     }
   }
 
@@ -515,11 +531,12 @@ export default function App() {
     try {
       const min = priceMin.trim();
       const max = priceMax.trim();
-      await api<Alert>("/v1/alerts", {
+      const created = await api<Alert>("/v1/alerts", {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
           name: trimmed,
+          telegramProfileId: activeProfileId,
           // Persist full query context so alerts are actually filtered like the UI.
           query: {
             q: trimmed,
@@ -553,6 +570,7 @@ export default function App() {
         })
       });
       await loadAlerts();
+      setArmedAlertIds((prev) => Array.from(new Set([...(prev ?? []), created.id])));
       setLiveMode("monitors");
       setActiveView("live");
     } catch (e) {
@@ -572,25 +590,34 @@ export default function App() {
     }
   }
 
-  async function toggleAlertEnabled(id: string, enabled: boolean) {
-    setAlertsError(null);
-    setAlerts((prev) => prev.map((a) => (a.id === id ? { ...a, enabled } : a)));
-    try {
-      await api<Alert>(`/v1/alerts/${encodeURIComponent(id)}`, {
-        method: "PATCH",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ enabled })
-      });
-      await loadAlerts();
-    } catch (e) {
-      setAlertsError(e instanceof Error ? e.message : "Unknown error");
-      await loadAlerts();
-    }
-  }
-
   useEffect(() => {
     void loadAlerts();
+    void loadTelegramProfiles();
   }, []);
+
+  async function createTelegramProfile(input: { name: string; botToken: string; chatId: string }) {
+    const profile = await api<TelegramProfile>("/v1/telegram-profiles", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify(input)
+    });
+    setTelegramProfiles((prev) => [profile, ...prev]);
+    setActiveProfileId(profile.id);
+  }
+
+  async function testTelegramProfile(id: string) {
+    await api(`/v1/telegram-profiles/${encodeURIComponent(id)}/test`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ text: "Telegram profile connected" })
+    });
+  }
+
+  async function deleteTelegramProfile(id: string) {
+    await api(`/v1/telegram-profiles/${encodeURIComponent(id)}`, { method: "DELETE" });
+    setTelegramProfiles((prev) => prev.filter((profile) => profile.id !== id));
+    setActiveProfileId((current) => current === id ? null : current);
+  }
 
   useEffect(() => {
     if (liveMode === "saved") {
@@ -613,6 +640,14 @@ export default function App() {
       esRef.current = null;
     };
   }, [selectedAlertId, liveMode, armedAlertIds]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem("armedAlertIds", JSON.stringify(armedAlertIds));
+    } catch {
+      // ignore
+    }
+  }, [armedAlertIds]);
 
   useEffect(() => {
     liveModeRef.current = liveMode;
@@ -810,67 +845,47 @@ export default function App() {
     void loadItemDetails(selectedItem.id);
   }, [selectedItem?.id]);
 
-  const refreshNow = () => {
-    if (activeView === "search") {
-      void runSearch(page);
-      return;
-    }
-    // live view
-    if (liveMode === "query") {
-      startLiveFromQuery();
-      return;
-    }
-    if (liveMode === "monitors") {
-      startLiveFromMonitors(armedAlertIds);
-      return;
-    }
-    if (selectedAlertId) startLiveFromSavedAlert(selectedAlertId);
-  };
-
   const startUnifiedLiveFeed = () => {
     const hasQuery = !!q.trim();
     const hasArmed = armedAlertIds.length > 0;
-    if (hasArmed) {
-      setLiveMode("monitors");
-      setSelectedAlertId(null);
-      startLiveFromMonitors(armedAlertIds);
+    if (hasQuery && hasArmed) {
+      const useQuery = window.confirm("Live Query?\nOK = query filters\nCancel = armed alerts");
+      if (useQuery) {
+        setLiveMode("query");
+        startLiveFromQuery();
+      } else {
+        setLiveMode("monitors");
+        setSelectedAlertId(null);
+        startLiveFromMonitors(armedAlertIds);
+      }
       return;
     }
     if (hasQuery) {
       setLiveMode("query");
       startLiveFromQuery();
+      return;
+    }
+    if (hasArmed) {
+      setLiveMode("monitors");
+      setSelectedAlertId(null);
+      startLiveFromMonitors(armedAlertIds);
     }
   };
 
-  useEffect(() => {
-    if (activeView !== "search") return;
-    if (loading || loadingMore || !canNext) return;
-    const el = infiniteRef.current;
-    if (!el) return;
-    const observer = new IntersectionObserver((entries) => {
-      const hit = entries.some((e) => e.isIntersecting);
-      if (hit && !loadingMore && !loading && canNext) {
-        void runSearch(page + 1, true);
-      }
-    }, { rootMargin: "600px 0px 600px 0px" });
-    observer.observe(el);
-    return () => observer.disconnect();
-  }, [activeView, page, canNext, loading, loadingMore]);
-
   return (
-    <div className="flex h-screen w-full overflow-hidden relative">
+    <div className="dashboard-shell flex h-[100dvh] w-full overflow-hidden relative">
       {toast && (
-        <div className="pointer-events-none fixed right-4 top-4 z-50 w-[min(420px,calc(100vw-24px))]">
+        <div className="pointer-events-none fixed bottom-4 right-4 z-50 w-[min(420px,calc(100vw-24px))]">
           <a
             href={toast.url}
             target="_blank"
             rel="noreferrer"
-            className="pointer-events-auto block rounded-2xl border border-emerald-200 bg-white/90 px-4 py-3 text-sm text-slate-900 shadow-lg backdrop-blur transition hover:bg-white"
+            className="pointer-events-auto block rounded-2xl border border-blue-200 bg-white/90 px-4 py-3 text-sm text-slate-900 shadow-lg backdrop-blur transition hover:bg-white"
             title="Open on Vinted"
           >
             <div className="flex items-start gap-2">
               <div className="mt-0.5">
-                <Icon name="bolt" className="text-emerald-600" />
+                <Icon name="bolt" className="text-blue-600" />
               </div>
               <div className="min-w-0">
                 <div className="truncate font-semibold">{toast.title}</div>
@@ -886,14 +901,18 @@ export default function App() {
         </div>
       )}
 
-        <Sidebar
+      <Sidebar
         open={sidebarOpen}
         setOpen={setSidebarOpen}
         alerts={alerts}
         alertsLoading={alertsLoading}
         alertsError={alertsError}
         selectedAlertId={selectedAlertId}
-        setSelectedAlertId={(id) => { setSelectedAlertId(id); setActiveView("live"); }}
+        setSelectedAlertId={(id) => {
+          setLiveMode("saved");
+          setSelectedAlertId(id);
+          setActiveView("live");
+        }}
         liveMode={liveMode}
         selectMonitors={() => {
           setLiveMode("monitors");
@@ -901,7 +920,7 @@ export default function App() {
           setActiveView("live");
         }}
         armedAlertIds={armedAlertIds}
-        toggleAlertEnabled={toggleAlertEnabled}
+        setArmedAlertIds={setArmedAlertIds}
         streamError={streamError}
         deleteAlert={deleteAlert}
         onEditAlert={(id) => {
@@ -917,8 +936,6 @@ export default function App() {
       <TopBar
           sidebarOpen={sidebarOpen}
           setSidebarOpen={setSidebarOpen}
-          inspectorOpen={inspectorOpen}
-          setInspectorOpen={setInspectorOpen}
           q={q}
           setQ={setQ}
           runSearch={runSearch}
@@ -928,20 +945,14 @@ export default function App() {
             setActiveView("live");
             startUnifiedLiveFeed();
           }}
-          refreshNow={refreshNow}
-          lastUpdatedAt={lastUpdatedAt}
           armedCount={armedAlertIds.length}
-          streamItemsLength={streamItems.length}
-          activeView={activeView}
-          setActiveView={setActiveView}
-          activeFiltersLabel={activeFiltersLabel}
-          layout={layout}
-          setLayout={setLayout}
           openFilters={() => setFiltersOpen(true)}
-          importVintedUrl={importFiltersFromVintedUrl}
+          importVintedUrl={() => setVintedUrlOpen(true)}
+          telegramProfilesCount={telegramProfiles.length}
+          openTelegramProfiles={() => navigateTo("/profiles")}
         />
 
-        <main className="flex-1 overflow-y-auto p-6 custom-scrollbar">
+        <main className="flex-1 overflow-y-auto p-3 pb-8 custom-scrollbar sm:p-6">
           <div className="mx-auto max-w-7xl">
             {error && (
               <div className="mb-6 rounded-2xl border border-rose-200 bg-rose-50/80 p-4 text-[14px] font-medium text-rose-700 shadow-sm backdrop-blur">
@@ -958,7 +969,7 @@ export default function App() {
                 <SkeletonRow />
               </div>
             ) : !items.length ? (
-              <div className="mt-12 flex flex-col items-center justify-center rounded-3xl border border-dashed border-slate-300 bg-white/40 p-12 text-center backdrop-blur-sm">
+              <div className="mt-6 flex flex-col items-center justify-center rounded-3xl border border-dashed border-slate-300 bg-white/40 p-8 text-center backdrop-blur-sm sm:mt-12 sm:p-12">
                 <div className="flex h-16 w-16 items-center justify-center rounded-full bg-slate-100 text-slate-400 mb-4 shadow-inner">
                   <Icon name={activeView === "live" ? "radar" : "search"} className="text-[32px]" />
                 </div>
@@ -967,23 +978,17 @@ export default function App() {
                 </h3>
                 <p className="text-slate-500 max-w-sm leading-relaxed">
                   {activeView === "live"
-                    ? "Your feed is empty. Select an alert from the sidebar or arm a new monitor to start receiving live items."
-                    : "Try adjusting your filters or search terms. Don't forget you can arm a monitor to get notified when new items appear!"}
+                    ? "Choisis une alerte ou arme un moniteur pour recevoir les nouveaux articles ici."
+                    : "Modifie ta recherche ou tes filtres, puis relance la recherche."}
                 </p>
               </div>
             ) : (
-              <div
-                className={
-                  layout === "cards"
-                    ? "grid grid-cols-1 gap-5 auto-rows-fr sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3"
-                    : "grid gap-3 max-w-5xl mx-auto"
-                }
-              >
+              <div className="grid grid-cols-2 gap-2.5 auto-rows-fr sm:gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3">
                 {items.map((it, index) => (
                   <ItemCard
                     key={`${it.id}-${index}`}
                     item={it}
-                    layout={layout}
+                    layout="cards"
                     hot={activeView === "live"}
                     selected={selectedItem?.id === it.id}
                     onHover={() => {}}
@@ -992,16 +997,11 @@ export default function App() {
                 ))}
               </div>
             )}
-            {activeView === "search" && items.length > 0 && (
-              <div ref={infiniteRef} className="h-16 flex items-center justify-center text-sm text-emerald-700">
-                {loadingMore ? "Loading more..." : canNext ? "Scroll for more" : "End"}
-              </div>
-            )}
           </div>
         </main>
       </div>
 
-      {inspectorOpen && selectedItem && (
+      {selectedItem && (
         <InspectorDrawer
           selectedItem={selectedItem}
           details={details}
@@ -1077,6 +1077,195 @@ export default function App() {
         materialSelected={materialSelected}
         setMaterialSelected={setMaterialSelected as any}
       />
+
+      <VintedUrlModal
+        open={vintedUrlOpen}
+        onClose={() => setVintedUrlOpen(false)}
+        onImport={importFiltersFromVintedUrl}
+      />
+
+      <TelegramProfilesModal
+        open={telegramProfilesOpen}
+        profiles={telegramProfiles}
+        activeProfileId={activeProfileId}
+        onSelect={setActiveProfileId}
+        onCreate={createTelegramProfile}
+        onTest={testTelegramProfile}
+        onDelete={deleteTelegramProfile}
+        onClose={() => setTelegramProfilesOpen(false)}
+      />
     </div>
   );
+}
+
+function navigateTo(path: string) {
+  window.history.pushState({}, "", path);
+  window.dispatchEvent(new PopStateEvent("popstate"));
+}
+
+const landingFeatures = [
+  {
+    title: "Des recherches qui restent actives",
+    description: "Transforme tes filtres Vinted en moniteurs et laisse le radar surveiller les nouvelles annonces."
+  },
+  {
+    title: "Un bot par personne",
+    description: "Associe chaque alerte au bon profil Telegram. Chacun reçoit uniquement ses propres trouvailles."
+  },
+  {
+    title: "Le filtre est le signal",
+    description: "Colle une URL Vinted ou affine à la main : catégories, marques, tailles, états et prix restent synchronisés."
+  }
+];
+
+const landingSteps = [
+  ["01", "Connecte Telegram", "Ajoute un profil et vérifie l’envoi avec un message de test."],
+  ["02", "Pose ton filtre", "Utilise l’interface Vinted ou compose une recherche précise dans Radar."],
+  ["03", "Laisse tourner", "Les nouveautés pertinentes arrivent dans le bon chat, sans rafraîchir une page."]
+];
+
+function LandingPage() {
+  return (
+    <main className="landing-shell min-h-screen overflow-hidden bg-slate-50 text-slate-950">
+      <div className="pointer-events-none absolute inset-x-0 top-0 h-[580px] bg-[radial-gradient(circle_at_70%_18%,rgba(37,99,235,0.14),transparent_28%),radial-gradient(circle_at_28%_0%,rgba(125,211,252,0.17),transparent_32%)]" />
+      <div className="relative mx-auto max-w-7xl px-5 pb-10 pt-5 sm:px-8 lg:px-10">
+        <header className="flex items-center justify-between py-3">
+          <button onClick={() => navigateTo("/")} className="text-sm font-medium tracking-[-0.03em] text-slate-950" aria-label="Accueil Friply">Friply</button>
+          <nav className="flex items-center gap-2" aria-label="Navigation principale">
+            <button onClick={() => navigateTo("/profiles")} className="hidden px-3 py-2 text-xs font-medium text-slate-500 transition hover:text-slate-950 sm:inline-flex">Profils Telegram</button>
+            <button onClick={() => navigateTo("/dashboard")} className="rounded-xl border border-slate-200 bg-white/70 px-4 py-2.5 text-xs font-medium text-slate-800 transition hover:border-slate-300 hover:bg-white">Ouvrir le dashboard</button>
+          </nav>
+        </header>
+
+        <section className="grid items-center gap-12 pb-20 pt-20 lg:grid-cols-[0.94fr_1.06fr] lg:pb-28 lg:pt-28">
+          <div className="max-w-2xl">
+            <p className="text-xs font-medium uppercase tracking-[0.14em] text-blue-600">Veille Vinted privée</p>
+            <h1 className="mt-5 max-w-xl text-5xl font-medium leading-[1.02] tracking-[-0.06em] text-slate-950 sm:text-6xl lg:text-7xl">
+              Ne cherche plus.<br />
+              <span className="text-blue-600">Sois le premier.</span>
+            </h1>
+            <p className="mt-7 max-w-lg text-base leading-7 text-slate-500 sm:text-lg">
+              Friply transforme tes recherches en moniteurs personnels et pousse les nouveaux articles dans les bons chats Telegram, au moment où ils apparaissent.
+            </p>
+            <div className="mt-9 flex flex-wrap gap-3">
+              <button onClick={() => navigateTo("/dashboard")} className="rounded-xl bg-blue-600 px-5 py-3.5 text-sm font-medium text-white shadow-lg shadow-blue-600/15 transition hover:bg-blue-700">Ouvrir mon radar</button>
+              <button onClick={() => navigateTo("/profiles")} className="rounded-xl border border-slate-200 bg-white/75 px-5 py-3.5 text-sm font-medium text-slate-600 transition hover:border-slate-300 hover:bg-white">Configurer Telegram</button>
+            </div>
+            <p className="mt-9 text-xs text-slate-400">Hébergé chez toi · Un profil par proche · Filtres Vinted importables</p>
+          </div>
+
+          <div className="relative mx-auto w-full max-w-2xl lg:max-w-none">
+            <div className="absolute -inset-5 -z-10 rounded-[2.5rem] bg-blue-500/8 blur-3xl" />
+            <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white/90 shadow-xl shadow-slate-900/8 backdrop-blur-xl">
+              <div className="flex items-center justify-between border-b border-slate-100 px-5 py-4 sm:px-6"><p className="text-sm font-medium text-slate-800">Nouvelles trouvailles</p><p className="text-xs text-slate-400">Sneakers · streetwear · denim</p></div>
+              <div className="grid gap-3 p-4 sm:p-5">
+                <div className="flex items-center gap-3 rounded-xl border border-blue-100 bg-blue-50/60 p-3.5">
+                  <div className="grid size-11 shrink-0 place-items-center rounded-lg bg-slate-900 text-xs font-medium text-white">€42</div>
+                  <div className="min-w-0 flex-1"><p className="truncate text-sm font-medium">Nike Air Force 1 blanches</p><p className="mt-1 text-[11px] text-slate-500">42 · Très bon état</p></div>
+                </div>
+                <div className="flex items-center gap-3 rounded-xl border border-slate-100 bg-white p-3.5">
+                  <div className="grid size-11 shrink-0 place-items-center rounded-lg bg-amber-100 text-xs font-medium text-amber-700">€35</div>
+                  <div className="min-w-0 flex-1"><p className="truncate text-sm font-medium">Sweat Nike Tech Fleece</p><p className="mt-1 text-[11px] text-slate-500">M · Bon état</p></div>
+                </div>
+                <div className="flex items-center gap-3 rounded-xl border border-slate-100 bg-white p-3.5">
+                  <div className="grid size-11 shrink-0 place-items-center rounded-lg bg-rose-100 text-xs font-medium text-rose-700">€27</div>
+                  <div className="min-w-0 flex-1"><p className="truncate text-sm font-medium">Jean Levi&apos;s 501</p><p className="mt-1 text-[11px] text-slate-500">W32 L32 · Excellent état</p></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section className="border-t border-slate-200 py-20 sm:py-28">
+          <div className="max-w-2xl"><p className="text-xs font-medium uppercase tracking-[0.14em] text-blue-600">Pour une veille simple</p><h2 className="mt-4 text-4xl font-medium tracking-[-0.05em] sm:text-5xl">Tout ce qu&apos;il faut. Rien de plus.</h2></div>
+          <div className="mt-12 grid divide-y divide-slate-200 border-y border-slate-200 md:grid-cols-3 md:divide-x md:divide-y-0">
+            {landingFeatures.map((feature) => (
+              <article key={feature.title} className="py-7 md:px-7 md:py-2 first:md:pl-0 last:md:pr-0">
+                <h3 className="text-base font-medium tracking-[-0.025em]">{feature.title}</h3>
+                <p className="mt-3 text-sm leading-6 text-slate-500">{feature.description}</p>
+              </article>
+            ))}
+          </div>
+        </section>
+
+        <section className="border-t border-slate-200 py-20 sm:py-28">
+          <div className="grid gap-12 lg:grid-cols-[0.7fr_1.3fr] lg:items-end">
+            <div><p className="text-xs font-medium uppercase tracking-[0.14em] text-blue-600">Le parcours</p><h2 className="mt-4 text-3xl font-medium tracking-[-0.05em] sm:text-4xl">Trois étapes, puis tu n&apos;y penses plus.</h2></div>
+            <div className="grid gap-7 sm:grid-cols-3 sm:gap-4">
+              {landingSteps.map(([number, title, description]) => (
+                <div key={number} className="border-t border-slate-200 pt-4"><p className="text-xs text-blue-600">{number}</p><h3 className="mt-4 text-sm font-medium">{title}</h3><p className="mt-2 text-xs leading-5 text-slate-500">{description}</p></div>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        <section className="border-t border-slate-200 py-20 sm:py-28">
+          <div className="max-w-2xl"><p className="text-xs font-medium uppercase tracking-[0.14em] text-blue-600">Prêt à lancer la veille</p><h2 className="mt-4 text-4xl font-medium tracking-[-0.055em] sm:text-5xl">Tes recherches méritent mieux qu&apos;un refresh manuel.</h2><p className="mt-5 text-base leading-7 text-slate-500">Crée un profil Telegram, arme une alerte, et laisse ton serveur faire le reste.</p></div>
+          <button onClick={() => navigateTo("/dashboard")} className="mt-8 rounded-xl bg-blue-600 px-5 py-3.5 text-sm font-medium text-white shadow-lg shadow-blue-600/15 transition hover:bg-blue-700">Accéder au dashboard</button>
+        </section>
+
+        <footer className="flex flex-col gap-3 border-t border-slate-200 py-8 text-xs text-slate-400 sm:flex-row sm:items-center sm:justify-between"><span>Friply · ton système de veille local</span><button onClick={() => navigateTo("/profiles")} className="text-left text-slate-500 transition hover:text-blue-600">Gérer les profils Telegram</button></footer>
+      </div>
+    </main>
+  );
+}
+
+function ProfilesPage() {
+  const [profiles, setProfiles] = useState<TelegramProfile[]>([]);
+
+  useEffect(() => {
+    void api<TelegramProfile[]>("/v1/telegram-profiles").then(setProfiles).catch(() => setProfiles([]));
+  }, []);
+
+  async function createProfile(input: { name: string; botToken: string; chatId: string }) {
+    const profile = await api<TelegramProfile>("/v1/telegram-profiles", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify(input)
+    });
+    setProfiles((current) => [profile, ...current]);
+  }
+
+  async function testProfile(id: string) {
+    await api(`/v1/telegram-profiles/${encodeURIComponent(id)}/test`, { method: "POST" });
+  }
+
+  async function deleteProfile(id: string) {
+    if (!window.confirm("Supprimer ce profil Telegram ? Ses alertes resteront sans profil.")) return;
+    await api(`/v1/telegram-profiles/${encodeURIComponent(id)}`, { method: "DELETE" });
+    setProfiles((current) => current.filter((profile) => profile.id !== id));
+  }
+
+  return (
+    <div className="profiles-shell min-h-screen bg-slate-100">
+      <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-5">
+        <button onClick={() => navigateTo("/")} className="text-sm font-medium tracking-[-0.03em] text-slate-800">Friply</button>
+        <button onClick={() => navigateTo("/dashboard")} className="rounded-xl bg-blue-600 px-4 py-2 text-xs font-bold text-white hover:bg-blue-700">Dashboard</button>
+      </div>
+      <TelegramProfilesModal
+        open
+        profiles={profiles}
+        activeProfileId={null}
+        onSelect={(id) => navigateTo(`/dashboard?profileId=${encodeURIComponent(id ?? "")}`)}
+        onCreate={createProfile}
+        onTest={testProfile}
+        onDelete={deleteProfile}
+        onClose={() => navigateTo("/dashboard")}
+      />
+    </div>
+  );
+}
+
+export default function App() {
+  const [path, setPath] = useState(() => window.location.pathname);
+
+  useEffect(() => {
+    const onPopState = () => setPath(window.location.pathname);
+    window.addEventListener("popstate", onPopState);
+    return () => window.removeEventListener("popstate", onPopState);
+  }, []);
+
+  if (path === "/profiles") return <ProfilesPage />;
+  if (path === "/dashboard") return <DashboardApp />;
+  return <LandingPage />;
 }

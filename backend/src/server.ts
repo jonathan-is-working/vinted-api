@@ -16,6 +16,8 @@ import { LiveSearchService } from "./live/live-search.service.js";
 import { NotificationsRepo } from "./notifications/notifications.repo.js";
 import { TelegramNotifier } from "./integrations/telegram/telegram.notifier.js";
 import { TelegramCommandPoller } from "./integrations/telegram/telegram.commands.js";
+import { TelegramProfilesRepo } from "./telegram/profiles.repo.js";
+import { ProfiledTelegramNotifier } from "./integrations/telegram/profiled.notifier.js";
 
 const env = getEnv();
 
@@ -52,16 +54,23 @@ if (notifications) {
   await notifications.migrate();
 }
 
+const telegramProfiles =
+  env.ALERTS_STORE === "postgres" ? new TelegramProfilesRepo(alertsStore.pool) : null;
+if (telegramProfiles) await telegramProfiles.migrate();
+
 const telegram =
   env.TELEGRAM_BOT_TOKEN && env.TELEGRAM_CHAT_ID
     ? new TelegramNotifier({ botToken: env.TELEGRAM_BOT_TOKEN, chatId: env.TELEGRAM_CHAT_ID })
     : undefined;
+const routedTelegram = telegramProfiles
+  ? new ProfiledTelegramNotifier(telegramProfiles, telegram)
+  : telegram;
 
 const alertsService = new AlertsService(
   alertsStore.store,
   searchService,
   notifications ?? undefined,
-  telegram
+  routedTelegram
 );
 
 if (telegram && env.TELEGRAM_ENABLE_COMMANDS && notifications) {
@@ -82,6 +91,7 @@ await registerV1Routes(app, {
   liveSearch,
   notifications,
   telegram,
+  telegramProfiles,
   sessions,
   catalogService,
   itemService,
