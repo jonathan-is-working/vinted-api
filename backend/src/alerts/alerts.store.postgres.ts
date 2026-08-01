@@ -6,7 +6,7 @@ export class PostgresAlertsStore {
 
   async listAlerts(): Promise<Alert[]> {
     const res = await this.pool.query(
-      `SELECT id, name, query_json, poll_interval_seconds, created_at, updated_at, last_run_at, last_error
+      `SELECT id, name, query_json, poll_interval_seconds, created_at, updated_at, last_run_at, last_error, enabled
        FROM alerts
        ORDER BY created_at DESC`
     );
@@ -18,13 +18,14 @@ export class PostgresAlertsStore {
       createdAt: Number(r.created_at),
       updatedAt: Number(r.updated_at),
       lastRunAt: r.last_run_at == null ? null : Number(r.last_run_at),
-      lastError: r.last_error ?? null
+      lastError: r.last_error ?? null,
+      enabled: r.enabled !== false
     }));
   }
 
   async getAlert(id: string): Promise<Alert | null> {
     const res = await this.pool.query(
-      `SELECT id, name, query_json, poll_interval_seconds, created_at, updated_at, last_run_at, last_error
+      `SELECT id, name, query_json, poll_interval_seconds, created_at, updated_at, last_run_at, last_error, enabled
        FROM alerts
        WHERE id = $1`,
       [id]
@@ -39,14 +40,15 @@ export class PostgresAlertsStore {
       createdAt: Number(r.created_at),
       updatedAt: Number(r.updated_at),
       lastRunAt: r.last_run_at == null ? null : Number(r.last_run_at),
-      lastError: r.last_error ?? null
+      lastError: r.last_error ?? null,
+      enabled: r.enabled !== false
     };
   }
 
   async putAlert(alert: Alert): Promise<void> {
     await this.pool.query(
-      `INSERT INTO alerts (id, name, query_json, poll_interval_seconds, created_at, updated_at, last_run_at, last_error)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8)
+      `INSERT INTO alerts (id, name, query_json, poll_interval_seconds, created_at, updated_at, last_run_at, last_error, enabled)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)
        ON CONFLICT (id) DO UPDATE SET
          name = EXCLUDED.name,
          query_json = EXCLUDED.query_json,
@@ -54,7 +56,8 @@ export class PostgresAlertsStore {
          created_at = EXCLUDED.created_at,
          updated_at = EXCLUDED.updated_at,
          last_run_at = EXCLUDED.last_run_at,
-         last_error = EXCLUDED.last_error`,
+         last_error = EXCLUDED.last_error,
+         enabled = EXCLUDED.enabled`,
       [
         alert.id,
         alert.name,
@@ -63,7 +66,8 @@ export class PostgresAlertsStore {
         alert.createdAt,
         alert.updatedAt,
         alert.lastRunAt,
-        alert.lastError
+        alert.lastError,
+        alert.enabled
       ]
     );
   }

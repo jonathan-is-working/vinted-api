@@ -62,6 +62,7 @@ export type Alert = {
   updatedAt: number;
   lastRunAt: number | null;
   lastError: string | null;
+  enabled: boolean;
   query: {
     q: string;
     perPage: number;

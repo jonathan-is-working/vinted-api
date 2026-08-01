@@ -75,7 +75,8 @@ export const SearchItemSchema = z.object({
   url: z.string().url(),
   brand: z.string().nullable(),
   size: z.string().nullable(),
-  condition: z.string().nullable()
+  condition: z.string().nullable(),
+  createdAt: z.number().int().nonnegative().nullable().optional()
 });
 
 export type SearchItem = z.infer<typeof SearchItemSchema>;

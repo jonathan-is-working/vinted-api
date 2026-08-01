@@ -31,6 +31,8 @@ Persistence:
 Telegram notifications (optional):
 - Set `TELEGRAM_BOT_TOKEN` and `TELEGRAM_CHAT_ID` to receive a Telegram message for each new item (alerts + live query).
 - Test quickly: `curl -X POST http://localhost:3000/v1/admin/telegram/test -H 'content-type: application/json' -d '{"text":"ping"}'`
+- Resend missed notifications from the last 3 hours: `./scripts/resend-missed.sh 3`. It previews the pending count, then asks for confirmation. Use `--dry-run` to only inspect, or `--yes` for unattended execution.
+- On Arch Linux, install the system-wide NetworkManager recovery cron with `sudo ./scripts/install-network-reconnect.sh`. It checks Internet and Telegram DNS every five minutes and reconnects disconnected interfaces when needed.
 - Optional commands (polling): set `TELEGRAM_ENABLE_COMMANDS=true`. Then send `/clear` (or `/clear 100`) to delete the last bot messages (best-effort).
 - Commands: `/help`, `/ping`, `/status`, `/alerts`, `/clear [n]`.
 

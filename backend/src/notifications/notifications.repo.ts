@@ -11,6 +11,14 @@ export type NotificationRow = {
   readAt: number | null;
 };
 
+export type PendingTelegramNotificationRow = {
+  id: string;
+  sourceType: "alert" | "query";
+  sourceKey: string;
+  item: unknown;
+  createdAt: number;
+};
+
 export class NotificationsRepo {
   constructor(private readonly pool: PgPool) {}
 
@@ -191,5 +199,50 @@ export class NotificationsRepo {
       `UPDATE notifications SET telegram_message_id = NULL WHERE telegram_message_id = ANY($1::bigint[])`,
       [messageIds]
     );
+  }
+
+  async listPendingTelegram(params: {
+    limit: number;
+    since?: number;
+    until?: number;
+    cursor?: number;
+  }): Promise<{ items: PendingTelegramNotificationRow[]; nextCursor: number | null }> {
+    const limit = Math.max(1, Math.min(1000, params.limit));
+    const since = typeof params.since === "number" ? params.since : 0;
+    const until = typeof params.until === "number" ? params.until : Date.now();
+    const cursor = typeof params.cursor === "number" ? params.cursor : undefined;
+
+    const where: string[] = [
+      "telegram_message_id IS NULL",
+      "created_at >= $1",
+      "created_at <= $2"
+    ];
+    const args: any[] = [since, until];
+    let idx = 3;
+
+    if (typeof cursor === "number") {
+      where.push(`created_at > $${idx++}`);
+      args.push(cursor);
+    }
+
+    const res = await this.pool.query(
+      `SELECT id, source_type, source_key, item_json, created_at
+       FROM notifications
+       WHERE ${where.join(" AND ")}
+       ORDER BY created_at ASC
+       LIMIT $${idx}`,
+      [...args, limit]
+    );
+
+    const rows = res.rows as any[];
+    const items: PendingTelegramNotificationRow[] = rows.map((r) => ({
+      id: r.id,
+      sourceType: r.source_type,
+      sourceKey: r.source_key,
+      item: r.item_json,
+      createdAt: Number(r.created_at)
+    }));
+    const nextCursor = items.length ? items[items.length - 1].createdAt : null;
+    return { items, nextCursor };
   }
 }

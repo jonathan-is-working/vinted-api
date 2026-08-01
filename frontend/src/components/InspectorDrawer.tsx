@@ -24,7 +24,7 @@ export function InspectorDrawer({
       {/* Header */}
       <div className="flex items-center justify-between px-6 py-5 border-b border-slate-200/50 bg-white/50">
         <div>
-          <div className="text-[11px] font-bold uppercase tracking-widest text-blue-600 mb-1">
+          <div className="text-[11px] font-bold uppercase tracking-widest text-emerald-700 mb-1">
             Inspector
           </div>
           <div className="text-[15px] font-bold text-slate-800 line-clamp-1">{item.title}</div>
@@ -106,7 +106,7 @@ export function InspectorDrawer({
 
             {/* Description Card */}
             <div className="rounded-3xl border border-slate-200/60 bg-white/60 p-5 shadow-sm backdrop-blur-sm relative overflow-hidden">
-              <div className="absolute top-0 left-0 w-1 h-full bg-blue-400" />
+              <div className="absolute top-0 left-0 w-1 h-full bg-emerald-400" />
               <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center gap-2">
                   <Icon name="description" className="text-slate-400 text-[18px]" />
@@ -114,7 +114,7 @@ export function InspectorDrawer({
                     Description
                   </h3>
                 </div>
-                <span className="rounded-full bg-blue-100 px-2 py-0.5 text-[10px] font-bold text-blue-700">Selected</span>
+                <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-bold text-emerald-700">Selected</span>
               </div>
 
               {detailsLoading ? (

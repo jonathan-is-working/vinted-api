@@ -67,6 +67,7 @@ export class SearchService {
       brand: string | null;
       size: string | null;
       condition: string | null;
+      createdAt: number | null;
     };
 
     const mapItems = (items: Array<any>): MappedItem[] =>
@@ -78,7 +79,8 @@ export class SearchService {
         url: it.url,
         brand: it.brand_title ?? null,
         size: it.size_title ?? null,
-        condition: it.status ?? null
+        condition: it.status ?? null,
+        createdAt: typeof it.created_at_ts === "number" ? it.created_at_ts * 1000 : null
       }));
 
     const facetCounts = (values: Array<string | null>) => {

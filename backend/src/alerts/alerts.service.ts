@@ -52,7 +52,8 @@ export class AlertsService {
       createdAt: t,
       updatedAt: t,
       lastRunAt: null,
-      lastError: null
+      lastError: null,
+      enabled: true
     };
     await this.store.putAlert(alert);
     this.startPolling(alert.id);
@@ -68,12 +69,13 @@ export class AlertsService {
       name: input.name ?? cur.name,
       query: input.query ?? cur.query,
       pollIntervalSeconds: input.pollIntervalSeconds ?? cur.pollIntervalSeconds,
+      enabled: input.enabled ?? cur.enabled,
       updatedAt: t
     };
     await this.store.putAlert(next);
     // Ensure polling interval + query changes apply immediately.
     this.stopPolling(id);
-    this.startPolling(id);
+    if (next.enabled) this.startPolling(id);
     return next;
   }
 
@@ -88,10 +90,13 @@ export class AlertsService {
 
   async startAll(): Promise<void> {
     const alerts = await this.store.listAlerts();
-    for (const alert of alerts) this.startPolling(alert.id);
+    for (const alert of alerts) {
+      if (alert.enabled) this.startPolling(alert.id);
+    }
   }
 
   startPolling(alertId: string): void {
+    if (this.timers.has(alertId)) return;
     const tick = async () => {
       await this.runOnce(alertId).catch(() => {});
     };
@@ -122,6 +127,7 @@ export class AlertsService {
   async runOnce(alertId: string): Promise<{ newItems: SearchItem[] }> {
     const alert = await this.store.getAlert(alertId);
     if (!alert) throw new Error("AlertNotFound");
+    if (!alert.enabled) return { newItems: [] };
 
     const t = now();
     await this.store.putAlert({ ...alert, lastRunAt: t, lastError: null, updatedAt: t });
@@ -208,5 +214,71 @@ export class AlertsService {
       });
       throw e;
     }
+  }
+
+  async backfillFromApi(params: {
+    alertId: string;
+    maxPages: number;
+    perPage: number;
+    since?: number;
+  }): Promise<{ scanned: number; created: number; sent: number; failed: number }> {
+    const alert = await this.store.getAlert(params.alertId);
+    if (!alert) throw new Error("AlertNotFound");
+
+    if (!this.notifications) {
+      throw new Error("BackfillRequiresPostgresNotifications");
+    }
+
+    const maxPages = Math.max(1, Math.min(200, Math.floor(params.maxPages)));
+    const perPage = Math.max(1, Math.min(96, Math.floor(params.perPage)));
+
+    let scanned = 0;
+    let created = 0;
+    let sent = 0;
+    let failed = 0;
+
+    for (let page = 1; page <= maxPages; page += 1) {
+      const res = await this.searchService.search({
+        ...alert.query,
+        page,
+        perPage,
+        sort: "newest"
+      }, { fillToPerPage: false });
+
+      if (!res.items.length) break;
+
+      for (const item of res.items) {
+        // Results are ordered newest-first. Once Vinted reaches the requested
+        // cutoff, later pages cannot contain relevant listings.
+        if (params.since != null && item.createdAt != null && item.createdAt < params.since) {
+          return { scanned, created, sent, failed };
+        }
+        scanned += 1;
+        const createdId = await this.notifications.createOrIgnore({
+          sourceType: "alert",
+          sourceKey: params.alertId,
+          itemId: item.id,
+          item
+        });
+        if (!createdId) continue;
+        created += 1;
+
+        if (this.notifier && (await this.notifications.claimTelegramItem(item.id, createdId))) {
+          const messageId = await this.notifier.notifyNewItem({
+            sourceType: "alert",
+            sourceKey: params.alertId,
+            item
+          });
+          if (typeof messageId === "number") {
+            await this.notifications.setTelegramMessageId(createdId, messageId);
+            sent += 1;
+          } else {
+            failed += 1;
+          }
+        }
+      }
+    }
+
+    return { scanned, created, sent, failed };
   }
 }

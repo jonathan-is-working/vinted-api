@@ -1,6 +1,13 @@
 import { type FastifyInstance } from "fastify";
+import { z } from "zod";
 import { CreateAlertBodySchema, UpdateAlertBodySchema } from "./alerts.types.js";
 import { type AlertsService } from "./alerts.service.js";
+
+const BackfillBodySchema = z.object({
+  maxPages: z.coerce.number().int().min(1).max(200).default(20),
+  perPage: z.coerce.number().int().min(1).max(96).default(96),
+  since: z.coerce.number().int().nonnegative().optional()
+});
 
 export async function registerAlertsRoutes(
   app: FastifyInstance,
@@ -59,6 +66,34 @@ export async function registerAlertsRoutes(
     if (!alert) return reply.code(404).send({ error: "NotFound" });
     const res = await deps.alertsService.runOnce(id);
     return reply.send(res);
+  });
+
+  app.post("/alerts/:id/backfill", async (req, reply) => {
+    const id = (req.params as any).id as string;
+    const alert = await deps.alertsService.getAlert(id);
+    if (!alert) return reply.code(404).send({ error: "NotFound" });
+
+    const parsed = BackfillBodySchema.safeParse(req.body ?? {});
+    if (!parsed.success) {
+      return reply.code(400).send({
+        error: "BadRequest",
+        message: "Invalid request body",
+        issues: parsed.error.issues
+      });
+    }
+
+    try {
+      const res = await deps.alertsService.backfillFromApi({
+        alertId: id,
+        maxPages: parsed.data.maxPages,
+        perPage: parsed.data.perPage,
+        since: parsed.data.since
+      });
+      return reply.send({ ok: true, alertId: id, ...res });
+    } catch (e) {
+      const message = e instanceof Error ? e.message : "UnknownError";
+      return reply.code(400).send({ error: "BadRequest", message });
+    }
   });
 
   app.get("/alerts/:id/events", async (req, reply) => {

@@ -46,7 +46,10 @@ export async function registerV1Routes(
       await registerNotificationsRoutes(v1, { notifications: deps.notifications });
     }
     if (deps.telegram) {
-      await registerTelegramRoutes(v1, { telegram: deps.telegram });
+      await registerTelegramRoutes(v1, {
+        telegram: deps.telegram,
+        notifications: deps.notifications ?? undefined
+      });
     }
     await registerUpstreamStatusRoutes(v1, { sessions: deps.sessions });
     await registerCatalogRoutes(v1, { catalogService: deps.catalogService });

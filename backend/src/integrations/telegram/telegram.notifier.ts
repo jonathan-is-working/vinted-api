@@ -1,4 +1,6 @@
 import axios from "axios";
+import FormData from "form-data";
+import https from "node:https";
 import { type SearchItem } from "../../domain/search.types.js";
 import {
   SIZE_IDS_14_TO_TITLE,
@@ -104,7 +106,12 @@ export class TelegramNotifier {
     return s.slice(0, max - 1) + "…";
   }
 
-  async notifyNewItem(input: { sourceType: "alert" | "query"; sourceKey: string; item: SearchItem }): Promise<number | null> {
+  async notifyNewItem(input: {
+    sourceType: "alert" | "query";
+    sourceKey: string;
+    item: SearchItem;
+    sendPhoto?: boolean;
+  }): Promise<number | null> {
     const title = input.item.title || `Item #${input.item.id}`;
     const price = `${(input.item.price.minor / 100).toFixed(2)} ${input.item.price.currency}`;
     const size = input.item.size ? ` • size ${input.item.size}` : "";
@@ -117,29 +124,47 @@ export class TelegramNotifier {
       `<b>${escapeHtml(price)}</b>${escapeHtml(brand)}${escapeHtml(size)}\n` +
       `<a href="${escapeHtml(input.item.url)}">Open on Vinted</a>`;
 
-    const http = axios.create({
-      baseURL: `https://api.telegram.org/bot${this.cfg.botToken}`,
-      timeout: 10_000
-    });
+    try {
+      const http = axios.create({
+        baseURL: `https://api.telegram.org/bot${this.cfg.botToken}`,
+        timeout: 10_000,
+        // Docker has no IPv6 route on this host; Telegram exposes AAAA records.
+        httpsAgent: new https.Agent({ family: 4 })
+      });
 
-    if (input.item.imageUrl) {
-      const res = await http.post("/sendPhoto", {
+      if (input.item.imageUrl && input.sendPhoto !== false) {
+        try {
+          const image = await axios.get<Buffer>(input.item.imageUrl, {
+            responseType: "arraybuffer",
+            timeout: 15_000
+          });
+          const form = new FormData();
+          form.append("chat_id", this.cfg.chatId);
+          form.append("photo", image.data, "vinted.jpg");
+          form.append("caption", this.clampCaption(caption));
+          form.append("parse_mode", "HTML");
+          const res = await http.post("/sendPhoto", form, { headers: form.getHeaders() });
+          const messageId = res?.data?.result?.message_id;
+          return typeof messageId === "number" ? messageId : null;
+        } catch (err) {
+          const code = (err as { code?: string } | null)?.code ?? "UNKNOWN";
+          console.error("[telegram] sendPhoto failed; falling back to sendMessage", { code });
+        }
+      }
+
+      const res = await http.post("/sendMessage", {
         chat_id: this.cfg.chatId,
-        photo: input.item.imageUrl,
-        caption: this.clampCaption(caption),
-        parse_mode: "HTML"
+        text: this.clampCaption(caption),
+        parse_mode: "HTML",
+        disable_web_page_preview: this.cfg.disableWebPreview ?? true
       });
       const messageId = res?.data?.result?.message_id;
       return typeof messageId === "number" ? messageId : null;
+    } catch (err) {
+      // Best-effort notifications: never crash the app if Telegram is slow/down.
+      const code = (err as { code?: string } | null)?.code ?? "UNKNOWN";
+      console.error("[telegram] notifyNewItem failed", { code });
+      return null;
     }
-
-    const res = await http.post("/sendMessage", {
-      chat_id: this.cfg.chatId,
-      text: this.clampCaption(caption),
-      parse_mode: "HTML",
-      disable_web_page_preview: this.cfg.disableWebPreview ?? true
-    });
-    const messageId = res?.data?.result?.message_id;
-    return typeof messageId === "number" ? messageId : null;
   }
 }

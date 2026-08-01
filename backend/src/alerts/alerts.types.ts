@@ -17,7 +17,8 @@ export type CreateAlertBody = z.infer<typeof CreateAlertBodySchema>;
 export const UpdateAlertBodySchema = z.object({
   name: z.string().trim().min(1).max(80).optional(),
   query: CreateAlertBodySchema.shape.query.optional(),
-  pollIntervalSeconds: z.coerce.number().int().min(15).max(3600).optional()
+  pollIntervalSeconds: z.coerce.number().int().min(15).max(3600).optional(),
+  enabled: z.boolean().optional()
 });
 
 export type UpdateAlertBody = z.infer<typeof UpdateAlertBodySchema>;
@@ -30,7 +31,8 @@ export const AlertSchema = z.object({
   createdAt: z.number().int(),
   updatedAt: z.number().int(),
   lastRunAt: z.number().int().nullable(),
-  lastError: z.string().nullable()
+  lastError: z.string().nullable(),
+  enabled: z.boolean().default(true)
 });
 
 export type Alert = z.infer<typeof AlertSchema>;

@@ -40,6 +40,7 @@ export async function migratePg(pool: PgPool): Promise<void> {
       created_at BIGINT NOT NULL,
       PRIMARY KEY(alert_id, item_id)
     );
+
+    ALTER TABLE alerts ADD COLUMN IF NOT EXISTS enabled BOOLEAN NOT NULL DEFAULT TRUE;
   `);
 }
-

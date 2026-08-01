@@ -18,6 +18,7 @@ export const VintedItemSchema = z.object({
   brand_title: z.string().optional(),
   size_title: z.string().optional(),
   status: z.string().optional(),
+  created_at_ts: z.number().int().optional(),
   photo: z
     .object({
       url: z.string().url()

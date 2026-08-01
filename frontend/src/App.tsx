@@ -26,7 +26,7 @@ export default function App() {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [inspectorOpen, setInspectorOpen] = useState(true);
   const [layout, setLayout] = useState<"list" | "cards">("cards");
-  const [liveMode, setLiveMode] = useState<"saved" | "query" | "monitors">("saved");
+  const [liveMode, setLiveMode] = useState<"saved" | "query" | "monitors">("monitors");
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [editingAlertId, setEditingAlertId] = useState<string | null>(null);
   const [toast, setToast] = useState<{ title: string; url: string } | null>(null);
@@ -79,22 +79,7 @@ export default function App() {
   const [alertsLoading, setAlertsLoading] = useState(false);
   const [alertsError, setAlertsError] = useState<string | null>(null);
   const [selectedAlertId, setSelectedAlertId] = useState<string | null>(null);
-  const [armedInit] = useState(() => {
-    try {
-      return localStorage.getItem("armedAlertIds") != null;
-    } catch {
-      return false;
-    }
-  });
-  const [armedAlertIds, setArmedAlertIds] = useState<string[]>(() => {
-    try {
-      const raw = localStorage.getItem("armedAlertIds");
-      const parsed = raw ? (JSON.parse(raw) as unknown) : null;
-      return Array.isArray(parsed) ? parsed.filter((v) => typeof v === "string") : [];
-    } catch {
-      return [];
-    }
-  });
+  const armedAlertIds = useMemo(() => alerts.filter((a) => a.enabled).map((a) => a.id), [alerts]);
   const [streamItems, setStreamItems] = useState<SearchItem[]>([]);
   const [streamError, setStreamError] = useState<string | null>(null);
   const esRef = useRef<EventSource | null>(null);
@@ -105,6 +90,8 @@ export default function App() {
   const [details, setDetails] = useState<ItemDetails | null>(null);
   const [detailsLoading, setDetailsLoading] = useState(false);
   const [detailsError, setDetailsError] = useState<string | null>(null);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const infiniteRef = useRef<HTMLDivElement | null>(null);
 
   const items = useMemo(() => {
     return activeView === "live" ? streamItems : data?.items ?? [];
@@ -156,15 +143,6 @@ export default function App() {
       const list = await api<Alert[]>("/v1/alerts");
       setAlerts(list);
       if (!selectedAlertId && list[0]?.id) setSelectedAlertId(list[0].id);
-      // Keep armed ids in-sync with existing alerts (prevents stale counts after DB reset / deletions).
-      setArmedAlertIds((prev) => {
-        const existing = new Set(list.map((a) => a.id));
-        const cleaned = prev.filter((id) => existing.has(id));
-        if (cleaned.length) return cleaned;
-        // Only auto-arm on the very first run (when there is no localStorage state yet).
-        if (!armedInit) return list.map((a) => a.id);
-        return [];
-      });
     } catch (e) {
       setAlertsError(e instanceof Error ? e.message : "Unknown error");
     } finally {
@@ -467,10 +445,11 @@ export default function App() {
     }
   }
 
-  async function runSearch(nextPage: number) {
+  async function runSearch(nextPage: number, append = false) {
     const trimmed = q.trim();
     if (!trimmed) return;
-    setLoading(true);
+    if (append) setLoadingMore(true);
+    else setLoading(true);
     setError(null);
     try {
       const url = new URL("/v1/search", API_BASE_URL);
@@ -511,7 +490,13 @@ export default function App() {
       const res = await fetch(url.toString());
       if (!res.ok) throw new Error(await res.text());
       const json = (await res.json()) as SearchResponse;
-      setData(json);
+      if (append && data) {
+        const seen = new Set(data.items.map((i) => i.id));
+        const merged = [...data.items, ...json.items.filter((i) => !seen.has(i.id))];
+        setData({ ...json, items: merged });
+      } else {
+        setData(json);
+      }
       setPage(json.page);
       setActiveView("search");
       setLastUpdatedAt(Date.now());
@@ -519,6 +504,7 @@ export default function App() {
       setError(e instanceof Error ? e.message : "Unknown error");
     } finally {
       setLoading(false);
+      setLoadingMore(false);
     }
   }
 
@@ -529,7 +515,7 @@ export default function App() {
     try {
       const min = priceMin.trim();
       const max = priceMax.trim();
-      const created = await api<Alert>("/v1/alerts", {
+      await api<Alert>("/v1/alerts", {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
@@ -567,7 +553,6 @@ export default function App() {
         })
       });
       await loadAlerts();
-      setArmedAlertIds((prev) => Array.from(new Set([...(prev ?? []), created.id])));
       setLiveMode("monitors");
       setActiveView("live");
     } catch (e) {
@@ -584,6 +569,22 @@ export default function App() {
       await loadAlerts();
     } catch (e) {
       setAlertsError(e instanceof Error ? e.message : "Unknown error");
+    }
+  }
+
+  async function toggleAlertEnabled(id: string, enabled: boolean) {
+    setAlertsError(null);
+    setAlerts((prev) => prev.map((a) => (a.id === id ? { ...a, enabled } : a)));
+    try {
+      await api<Alert>(`/v1/alerts/${encodeURIComponent(id)}`, {
+        method: "PATCH",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ enabled })
+      });
+      await loadAlerts();
+    } catch (e) {
+      setAlertsError(e instanceof Error ? e.message : "Unknown error");
+      await loadAlerts();
     }
   }
 
@@ -612,14 +613,6 @@ export default function App() {
       esRef.current = null;
     };
   }, [selectedAlertId, liveMode, armedAlertIds]);
-
-  useEffect(() => {
-    try {
-      localStorage.setItem("armedAlertIds", JSON.stringify(armedAlertIds));
-    } catch {
-      // ignore
-    }
-  }, [armedAlertIds]);
 
   useEffect(() => {
     liveModeRef.current = liveMode;
@@ -837,29 +830,32 @@ export default function App() {
   const startUnifiedLiveFeed = () => {
     const hasQuery = !!q.trim();
     const hasArmed = armedAlertIds.length > 0;
-    if (hasQuery && hasArmed) {
-      const useQuery = window.confirm("Live Query?\nOK = query filters\nCancel = armed alerts");
-      if (useQuery) {
-        setLiveMode("query");
-        startLiveFromQuery();
-      } else {
-        setLiveMode("monitors");
-        setSelectedAlertId(null);
-        startLiveFromMonitors(armedAlertIds);
-      }
+    if (hasArmed) {
+      setLiveMode("monitors");
+      setSelectedAlertId(null);
+      startLiveFromMonitors(armedAlertIds);
       return;
     }
     if (hasQuery) {
       setLiveMode("query");
       startLiveFromQuery();
-      return;
-    }
-    if (hasArmed) {
-      setLiveMode("monitors");
-      setSelectedAlertId(null);
-      startLiveFromMonitors(armedAlertIds);
     }
   };
+
+  useEffect(() => {
+    if (activeView !== "search") return;
+    if (loading || loadingMore || !canNext) return;
+    const el = infiniteRef.current;
+    if (!el) return;
+    const observer = new IntersectionObserver((entries) => {
+      const hit = entries.some((e) => e.isIntersecting);
+      if (hit && !loadingMore && !loading && canNext) {
+        void runSearch(page + 1, true);
+      }
+    }, { rootMargin: "600px 0px 600px 0px" });
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [activeView, page, canNext, loading, loadingMore]);
 
   return (
     <div className="flex h-screen w-full overflow-hidden relative">
@@ -869,12 +865,12 @@ export default function App() {
             href={toast.url}
             target="_blank"
             rel="noreferrer"
-            className="pointer-events-auto block rounded-2xl border border-blue-200 bg-white/90 px-4 py-3 text-sm text-slate-900 shadow-lg backdrop-blur transition hover:bg-white"
+            className="pointer-events-auto block rounded-2xl border border-emerald-200 bg-white/90 px-4 py-3 text-sm text-slate-900 shadow-lg backdrop-blur transition hover:bg-white"
             title="Open on Vinted"
           >
             <div className="flex items-start gap-2">
               <div className="mt-0.5">
-                <Icon name="bolt" className="text-blue-600" />
+                <Icon name="bolt" className="text-emerald-600" />
               </div>
               <div className="min-w-0">
                 <div className="truncate font-semibold">{toast.title}</div>
@@ -890,18 +886,14 @@ export default function App() {
         </div>
       )}
 
-      <Sidebar
+        <Sidebar
         open={sidebarOpen}
         setOpen={setSidebarOpen}
         alerts={alerts}
         alertsLoading={alertsLoading}
         alertsError={alertsError}
         selectedAlertId={selectedAlertId}
-        setSelectedAlertId={(id) => {
-          setLiveMode("saved");
-          setSelectedAlertId(id);
-          setActiveView("live");
-        }}
+        setSelectedAlertId={(id) => { setSelectedAlertId(id); setActiveView("live"); }}
         liveMode={liveMode}
         selectMonitors={() => {
           setLiveMode("monitors");
@@ -909,7 +901,7 @@ export default function App() {
           setActiveView("live");
         }}
         armedAlertIds={armedAlertIds}
-        setArmedAlertIds={setArmedAlertIds}
+        toggleAlertEnabled={toggleAlertEnabled}
         streamError={streamError}
         deleteAlert={deleteAlert}
         onEditAlert={(id) => {
@@ -936,11 +928,8 @@ export default function App() {
             setActiveView("live");
             startUnifiedLiveFeed();
           }}
-          liveMode={liveMode}
-          setLiveMode={setLiveMode}
           refreshNow={refreshNow}
           lastUpdatedAt={lastUpdatedAt}
-          selectedAlertId={selectedAlertId}
           armedCount={armedAlertIds.length}
           streamItemsLength={streamItems.length}
           activeView={activeView}
@@ -948,11 +937,6 @@ export default function App() {
           activeFiltersLabel={activeFiltersLabel}
           layout={layout}
           setLayout={setLayout}
-          data={data}
-          page={page}
-          perPage={perPage}
-          setPerPage={setPerPage}
-          canNext={canNext}
           openFilters={() => setFiltersOpen(true)}
           importVintedUrl={importFiltersFromVintedUrl}
         />
@@ -1006,6 +990,11 @@ export default function App() {
                     onClick={setSelectedItem}
                   />
                 ))}
+              </div>
+            )}
+            {activeView === "search" && items.length > 0 && (
+              <div ref={infiniteRef} className="h-16 flex items-center justify-center text-sm text-emerald-700">
+                {loadingMore ? "Loading more..." : canNext ? "Scroll for more" : "End"}
               </div>
             )}
           </div>
