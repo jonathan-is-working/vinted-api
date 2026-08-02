@@ -80,7 +80,7 @@ services:
       context: ./frontend
       args:
         # The frontend runs in the browser on your machine, so it must reach the API via localhost.
-        VITE_API_BASE_URL: "${VITE_API_BASE_URL:-http://localhost:${BACKEND_PORT:-3000}}"
+        VITE_API_BASE_URL: "${VITE_API_BASE_URL:-}"
     depends_on:
       backend:
         condition: service_healthy
