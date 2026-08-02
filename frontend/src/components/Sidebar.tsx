@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { Alert } from "../types";
 import { cx } from "../utils";
 import { Icon, type IconName } from "./Icon";
@@ -121,6 +121,17 @@ export function Sidebar(props: SidebarProps) {
     // filters are now in a popup modal; keep sidebar clean
   } = props;
   const [searchFilter, setSearchFilter] = useState<"armed" | "active" | "all" | "disabled">("armed");
+  const [alertToDelete, setAlertToDelete] = useState<Alert | null>(null);
+
+  useEffect(() => {
+    if (!alertToDelete) return;
+
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setAlertToDelete(null);
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [alertToDelete]);
 
   const visibleAlerts = useMemo(() => {
     if (searchFilter === "armed") return alerts.filter((alert) => alert.enabled !== false && armedAlertIds.includes(alert.id));
@@ -128,6 +139,7 @@ export function Sidebar(props: SidebarProps) {
     if (searchFilter === "disabled") return alerts.filter((alert) => alert.enabled === false);
     return alerts;
   }, [alerts, armedAlertIds, searchFilter]);
+  const alertIsArmed = alertToDelete ? armedAlertIds.includes(alertToDelete.id) : false;
 
   if (!open) return null;
 
@@ -282,7 +294,7 @@ export function Sidebar(props: SidebarProps) {
                       title="Delete"
                       onClick={(e) => {
                         e.stopPropagation();
-                        deleteAlert(a.id);
+                        setAlertToDelete(a);
                       }}
                     >
                       <Icon name="delete" className="text-[18px]" />
@@ -309,6 +321,59 @@ export function Sidebar(props: SidebarProps) {
         </Section>
       </div>
       </aside>
+
+      {alertToDelete ? (
+        <div
+          className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-950/65 px-4 backdrop-blur-sm"
+          role="presentation"
+          onMouseDown={(event) => {
+            if (event.target === event.currentTarget) setAlertToDelete(null);
+          }}
+        >
+          <div
+            className="w-full max-w-md rounded-2xl border border-slate-700/70 bg-slate-900 p-6 text-slate-100 shadow-2xl"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="delete-alert-title"
+            aria-describedby="delete-alert-description"
+            onMouseDown={(event) => event.stopPropagation()}
+          >
+            <div className="mb-5 flex items-start gap-3">
+              <div className="grid size-10 shrink-0 place-items-center rounded-xl bg-rose-500/15 text-rose-300">
+                <Icon name="delete" className="text-[20px]" />
+              </div>
+              <div>
+                <h2 id="delete-alert-title" className="text-base font-semibold tracking-[-0.02em]">
+                  Supprimer cette alerte{alertIsArmed ? " armée" : ""} ?
+                </h2>
+                <p id="delete-alert-description" className="mt-1 text-sm leading-5 text-slate-400">
+                  « {alertToDelete.name || alertToDelete.id.slice(0, 8)} » sera supprimée définitivement
+                  {alertIsArmed ? " et ne sera plus surveillée" : ""}.
+                </p>
+              </div>
+            </div>
+            <div className="flex justify-end gap-2">
+              <button
+                type="button"
+                className="rounded-xl border border-slate-700 px-4 py-2 text-sm font-medium text-slate-300 transition hover:bg-slate-800 hover:text-white"
+                onClick={() => setAlertToDelete(null)}
+              >
+                Annuler
+              </button>
+              <button
+                type="button"
+                className="rounded-xl bg-rose-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-rose-500"
+                onClick={() => {
+                  deleteAlert(alertToDelete.id);
+                  setAlertToDelete(null);
+                }}
+              >
+                Supprimer
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </>
   );
 }
