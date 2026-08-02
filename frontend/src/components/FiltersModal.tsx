@@ -689,12 +689,12 @@ export function FiltersModal(props: {
             </div>
           </div>
 
-          <div className="flex items-center justify-end gap-2 px-6 py-4 border-t border-white/40">
+          <div className="flex border-t border-white/40 px-4 py-4 sm:justify-end sm:px-6">
             {props.primaryAction ? (
               <button
                 className={cx(
-                  "rounded-2xl bg-blue-600 px-5 py-2.5 text-sm font-bold text-white shadow-md transition-all",
-                  props.primaryAction.disabled ? "opacity-50 cursor-not-allowed" : "hover:bg-blue-700"
+                  "min-h-11 w-full rounded-2xl bg-blue-600 px-5 py-2.5 text-sm font-bold text-white shadow-md transition-all sm:w-auto sm:min-w-36",
+                  props.primaryAction.disabled ? "cursor-not-allowed opacity-50" : "hover:bg-blue-700"
                 )}
                 disabled={props.primaryAction.disabled}
                 onClick={props.primaryAction.onClick}
@@ -702,12 +702,6 @@ export function FiltersModal(props: {
                 {props.primaryAction.label}
               </button>
             ) : null}
-            <button
-              className="rounded-2xl bg-slate-900 px-5 py-2.5 text-sm font-bold text-white shadow-md hover:bg-slate-800 transition-all"
-              onClick={props.onClose}
-            >
-              Done
-            </button>
           </div>
         </div>
       </div>

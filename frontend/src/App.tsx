@@ -998,11 +998,16 @@ function DashboardApp() {
           setFiltersOpen(false);
           setEditingAlertId(null);
         }}
-        primaryAction={
-          editingAlertId
-            ? { label: "Save to alert", onClick: () => void saveEditingAlert(), disabled: !q.trim() }
-            : undefined
-        }
+        primaryAction={{
+          label: editingAlertId ? "Enregistrer" : "Fermer",
+          onClick: editingAlertId
+            ? () => void saveEditingAlert()
+            : () => {
+                setFiltersOpen(false);
+                setEditingAlertId(null);
+              },
+          disabled: editingAlertId ? !q.trim() : false
+        }}
         sort={sort}
         setSort={setSort}
         currency={currency}
