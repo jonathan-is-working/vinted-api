@@ -60,11 +60,11 @@ export function TopBar({
           </div>
         </div>
         {searchInput}
-        <div className="mt-3 flex gap-2 overflow-x-auto pb-0.5">
-          <button onClick={openFilters} className="shrink-0 rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-medium text-slate-700">Filtres</button>
-          <button onClick={importVintedUrl} className="shrink-0 rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-medium text-slate-700">Lien Vinted</button>
-          <button onClick={createAlertFromQuery} disabled={!canUseQuery || loading} className="shrink-0 rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 text-xs font-medium text-blue-700 disabled:opacity-40">Créer l&apos;alerte</button>
-          <button onClick={startLiveFeed} disabled={!canUseQuery && armedCount === 0} className="shrink-0 rounded-lg bg-blue-600 px-3 py-2 text-xs font-medium text-white disabled:opacity-40">Démarrer le live</button>
+        <div className="mt-3 grid grid-cols-2 gap-2">
+          <button onClick={openFilters} className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-medium text-slate-700">Filtres</button>
+          <button onClick={importVintedUrl} className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-medium text-slate-700">Lien Vinted</button>
+          <button onClick={createAlertFromQuery} disabled={!canUseQuery || loading} className="w-full rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 text-xs font-medium text-blue-700 disabled:opacity-40">Créer l&apos;alerte</button>
+          <button onClick={startLiveFeed} disabled={!canUseQuery && armedCount === 0} className="w-full rounded-lg bg-blue-600 px-3 py-2 text-xs font-medium text-white disabled:opacity-40">Démarrer le live</button>
         </div>
       </header>
 
