@@ -138,8 +138,9 @@ export function Sidebar(props: SidebarProps) {
         aria-label="Fermer les alertes"
         onClick={() => setOpen(false)}
       />
-      <aside className="fixed inset-y-0 left-0 z-40 flex w-[min(340px,calc(100vw-24px))] flex-col overflow-x-hidden border-r border-slate-200 bg-white shadow-2xl transition-transform lg:static lg:z-20 lg:h-full lg:w-[320px] lg:shrink-0 lg:bg-white/80 lg:shadow-[4px_0_24px_rgba(15,23,42,0.03)] lg:backdrop-blur-xl">
-      <div className="flex items-center gap-3 border-b border-slate-200 px-5 py-4">
+      <aside className="fixed inset-y-0 right-0 z-40 flex w-[min(340px,calc(100vw-24px))] flex-col overflow-x-hidden border-l border-slate-200 bg-white shadow-2xl transition-transform lg:static lg:z-20 lg:h-full lg:w-[320px] lg:shrink-0 lg:border-l-0 lg:border-r lg:bg-white/80 lg:shadow-[4px_0_24px_rgba(15,23,42,0.03)] lg:backdrop-blur-xl">
+      <div className="flex items-center justify-between gap-3 border-b border-slate-200 px-5 py-4">
+        <button onClick={() => { window.history.pushState({}, "", "/"); window.dispatchEvent(new PopStateEvent("popstate")); }} className="text-left"><div className="text-sm font-semibold tracking-[-0.03em] text-slate-900">Friply</div><div className="mt-0.5 text-[10px] font-medium uppercase tracking-[0.12em] text-slate-400">Mes alertes</div></button>
         <button
           className="flex h-8 w-8 items-center justify-center rounded-full hover:bg-slate-100 text-slate-500 transition-colors"
           onClick={() => setOpen(false)}
@@ -148,7 +149,6 @@ export function Sidebar(props: SidebarProps) {
         >
           <Icon name="keyboard_tab_rtl" />
         </button>
-        <button onClick={() => { window.history.pushState({}, "", "/"); window.dispatchEvent(new PopStateEvent("popstate")); }} className="text-left"><div className="text-sm font-semibold tracking-[-0.03em] text-slate-900">Friply</div><div className="mt-0.5 text-[10px] font-medium uppercase tracking-[0.12em] text-slate-400">Mes alertes</div></button>
       </div>
 
       <div className="flex-1 overflow-y-auto overflow-x-hidden px-4 py-4 custom-scrollbar space-y-3">
