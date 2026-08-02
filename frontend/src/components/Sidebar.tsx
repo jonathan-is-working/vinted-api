@@ -120,7 +120,7 @@ export function Sidebar(props: SidebarProps) {
     onEditAlert,
     // filters are now in a popup modal; keep sidebar clean
   } = props;
-  const [searchFilter, setSearchFilter] = useState<"armed" | "active" | "all" | "disabled">("armed");
+  const [searchFilter, setSearchFilter] = useState<"armed" | "unarmed" | "all">("armed");
   const [alertToDelete, setAlertToDelete] = useState<Alert | null>(null);
 
   useEffect(() => {
@@ -134,9 +134,8 @@ export function Sidebar(props: SidebarProps) {
   }, [alertToDelete]);
 
   const visibleAlerts = useMemo(() => {
-    if (searchFilter === "armed") return alerts.filter((alert) => alert.enabled !== false && armedAlertIds.includes(alert.id));
-    if (searchFilter === "active") return alerts.filter((alert) => alert.enabled !== false && !armedAlertIds.includes(alert.id));
-    if (searchFilter === "disabled") return alerts.filter((alert) => alert.enabled === false);
+    if (searchFilter === "armed") return alerts.filter((alert) => armedAlertIds.includes(alert.id));
+    if (searchFilter === "unarmed") return alerts.filter((alert) => !armedAlertIds.includes(alert.id));
     return alerts;
   }, [alerts, armedAlertIds, searchFilter]);
   const alertIsArmed = alertToDelete ? armedAlertIds.includes(alertToDelete.id) : false;
@@ -171,12 +170,11 @@ export function Sidebar(props: SidebarProps) {
           badge={visibleAlerts.length ? <Badge>{visibleAlerts.length}</Badge> : undefined}
         >
           <div className="grid gap-2">
-            <div className="grid grid-cols-4 rounded-xl bg-slate-100 p-1">
+            <div className="grid grid-cols-3 rounded-xl bg-slate-100 p-1">
               {([
                 ["armed", "Armed"],
-                ["active", "Actives"],
-                ["all", "Toutes"],
-                ["disabled", "Off"]
+                ["unarmed", "Unarmed"],
+                ["all", "All"]
               ] as const).map(([value, label]) => (
                 <button
                   key={value}
@@ -304,7 +302,7 @@ export function Sidebar(props: SidebarProps) {
               })
             ) : (
               <div className="rounded-xl border border-dashed border-slate-300 bg-white/60 p-3 text-center text-[12px] text-slate-600">
-                {searchFilter === "armed" ? "Aucune alerte armed." : searchFilter === "disabled" ? "Aucune alerte désactivée." : "Aucune saved search dans ce filtre."}
+                {searchFilter === "armed" ? "Aucune alerte armed." : searchFilter === "unarmed" ? "Aucune alerte unarmed." : "Aucune saved search."}
               </div>
             )}
 
