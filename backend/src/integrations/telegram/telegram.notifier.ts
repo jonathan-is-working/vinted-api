@@ -36,6 +36,45 @@ export type TelegramNotifierConfig = {
 export class TelegramNotifier {
   constructor(private readonly cfg: TelegramNotifierConfig) {}
 
+  private async downloadImage(url: string): Promise<Buffer | null> {
+    const MAX_ATTEMPTS = 5;
+
+    for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt += 1) {
+      try {
+        const response = await axios.get<ArrayBuffer>(url, {
+          responseType: "arraybuffer",
+          timeout: 15_000,
+          httpsAgent: new https.Agent({ family: 4 }),
+          validateStatus: (status) => status >= 200 && status < 300
+        });
+        const contentType = String(response.headers["content-type"] ?? "").toLowerCase();
+        const image = Buffer.from(response.data);
+        if (!contentType.startsWith("image/") || image.length === 0) {
+          throw new Error("InvalidImageResponse");
+        }
+        return image;
+      } catch (err) {
+        if (attempt === MAX_ATTEMPTS) {
+          const code = (err as { code?: string } | null)?.code ?? "UNKNOWN";
+          console.error("[telegram] image unavailable after retries; notification skipped", { url, code });
+          return null;
+        }
+        // Exponential back-off: 500ms, 1s, 2s, 4s
+        await new Promise((resolve) => setTimeout(resolve, 500 * 2 ** (attempt - 1)));
+      }
+    }
+
+    return null;
+  }
+
+  /** Fire-and-forget wrapper: attempts to send, never throws, never blocks the caller. */
+  private sendAsync(fn: () => Promise<void>): void {
+    fn().catch((err) => {
+      const code = (err as { code?: string } | null)?.code ?? "UNKNOWN";
+      console.error("[telegram] sendAsync unhandled error", { code });
+    });
+  }
+
   private formatSource(input: { sourceType: "alert" | "query"; sourceKey: string }): string {
     if (input.sourceType === "alert") {
       return `Alert <code>${escapeHtml(input.sourceKey.slice(0, 8))}</code>`;
@@ -106,14 +145,14 @@ export class TelegramNotifier {
     return s.slice(0, max - 1) + "…";
   }
 
-  async notifyNewItem(input: {
+  notifyNewItem(input: {
     sourceType: "alert" | "query";
     sourceKey: string;
     item: SearchItem;
     sendPhoto?: boolean;
-  }): Promise<number | null> {
+  }): void {
     // Every item notification must include a usable image. Never fall back to a text-only message.
-    if (!input.item.imageUrl || input.sendPhoto === false) return null;
+    if (!input.item.imageUrl || input.sendPhoto === false) return;
 
     const title = input.item.title || `Item #${input.item.id}`;
     const price = `${(input.item.price.minor / 100).toFixed(2)} ${input.item.price.currency}`;
@@ -127,7 +166,8 @@ export class TelegramNotifier {
       `<b>${escapeHtml(price)}</b>${escapeHtml(brand)}${escapeHtml(size)}\n` +
       `<a href="${escapeHtml(input.item.url)}">Open on Vinted</a>`;
 
-    try {
+    // Non-blocking: download + send run in the background; caller is never awaited.
+    this.sendAsync(async () => {
       const http = axios.create({
         baseURL: `https://api.telegram.org/bot${this.cfg.botToken}`,
         timeout: 10_000,
@@ -135,23 +175,15 @@ export class TelegramNotifier {
         httpsAgent: new https.Agent({ family: 4 })
       });
 
-      const image = await axios.get<Buffer>(input.item.imageUrl, {
-        responseType: "arraybuffer",
-        timeout: 15_000
-      });
+      const image = await this.downloadImage(input.item.imageUrl!);
+      if (!image) return; // already logged inside downloadImage
+
       const form = new FormData();
       form.append("chat_id", this.cfg.chatId);
-      form.append("photo", image.data, "vinted.jpg");
+      form.append("photo", image, "vinted.jpg");
       form.append("caption", this.clampCaption(caption));
       form.append("parse_mode", "HTML");
-      const res = await http.post("/sendPhoto", form, { headers: form.getHeaders() });
-      const messageId = res?.data?.result?.message_id;
-      return typeof messageId === "number" ? messageId : null;
-    } catch (err) {
-      // Best-effort notifications: never crash the app if Telegram is slow/down.
-      const code = (err as { code?: string } | null)?.code ?? "UNKNOWN";
-      console.error("[telegram] notifyNewItem failed", { code });
-      return null;
-    }
+      await http.post("/sendPhoto", form, { headers: form.getHeaders() });
+    });
   }
 }

@@ -7,5 +7,5 @@ export type ItemNotifier = {
     item: SearchItem;
     sendPhoto?: boolean;
     profileId?: string | null;
-  }): Promise<number | null>;
+  }): void | Promise<void>;
 };

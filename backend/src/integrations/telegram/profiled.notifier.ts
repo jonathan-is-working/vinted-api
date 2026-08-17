@@ -8,10 +8,13 @@ export class ProfiledTelegramNotifier implements ItemNotifier {
     private readonly fallback?: ItemNotifier
   ) {}
 
-  async notifyNewItem(input: Parameters<ItemNotifier["notifyNewItem"]>[0]): Promise<number | null> {
-    if (!input.profileId) return this.fallback?.notifyNewItem(input) ?? null;
+  async notifyNewItem(input: Parameters<ItemNotifier["notifyNewItem"]>[0]): Promise<void> {
+    if (!input.profileId) {
+      this.fallback?.notifyNewItem(input);
+      return;
+    }
     const profile = await this.profiles.get(input.profileId);
-    if (!profile) return null;
-    return new TelegramNotifier({ botToken: profile.botToken, chatId: profile.chatId }).notifyNewItem(input);
+    if (!profile) return;
+    new TelegramNotifier({ botToken: profile.botToken, chatId: profile.chatId }).notifyNewItem(input);
   }
 }

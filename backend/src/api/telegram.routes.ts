@@ -96,17 +96,12 @@ export async function registerTelegramRoutes(
 
         if (dryRun) continue;
 
-        const messageId = await deps.telegram.notifyNewItem({
+        deps.telegram.notifyNewItem({
           sourceType: row.sourceType,
           sourceKey: row.sourceKey,
           item: row.item as SearchItem
         });
-        if (typeof messageId === "number") {
-          await deps.notifications.setTelegramMessageId(row.id, messageId);
-          sent += 1;
-        } else {
-          failed += 1;
-        }
+        sent += 1;
       }
 
       if (!batch.nextCursor) break;

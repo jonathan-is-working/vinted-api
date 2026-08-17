@@ -157,13 +157,7 @@ export class AlertsService {
           fresh.push(item);
           if (this.notifier && (await this.notifications.claimTelegramItem(item.id, createdId, alert.telegramProfileId))) {
             try {
-              void this.notifier
-                .notifyNewItem({ sourceType: "alert", sourceKey: alertId, item, profileId: alert.telegramProfileId })
-                .then((messageId) => {
-                  if (typeof messageId === "number") {
-                    void this.notifications!.setTelegramMessageId(createdId, messageId);
-                  }
-                });
+              this.notifier.notifyNewItem({ sourceType: "alert", sourceKey: alertId, item, profileId: alert.telegramProfileId });
             } catch {
               // ignore notifier errors (alerts should keep running)
             }
@@ -266,17 +260,12 @@ export class AlertsService {
         created += 1;
 
         if (this.notifier && (await this.notifications.claimTelegramItem(item.id, createdId))) {
-          const messageId = await this.notifier.notifyNewItem({
+          this.notifier.notifyNewItem({
             sourceType: "alert",
             sourceKey: params.alertId,
             item
           });
-          if (typeof messageId === "number") {
-            await this.notifications.setTelegramMessageId(createdId, messageId);
-            sent += 1;
-          } else {
-            failed += 1;
-          }
+          sent += 1;
         }
       }
     }

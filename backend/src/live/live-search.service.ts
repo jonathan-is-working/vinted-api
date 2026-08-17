@@ -134,13 +134,7 @@ export class LiveSearchService {
         });
         if (createdId && this.notifier && (await this.notifications!.claimTelegramItem(it.id, createdId))) {
           try {
-            void this.notifier
-              .notifyNewItem({ sourceType: "query", sourceKey: feed.key, item: it })
-              .then((messageId) => {
-                if (typeof messageId === "number") {
-                  void this.notifications!.setTelegramMessageId(createdId, messageId);
-                }
-              });
+            this.notifier.notifyNewItem({ sourceType: "query", sourceKey: feed.key, item: it });
           } catch {
             // ignore notifier errors (live feed should keep running)
           }
