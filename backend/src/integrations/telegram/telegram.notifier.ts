@@ -112,6 +112,9 @@ export class TelegramNotifier {
     item: SearchItem;
     sendPhoto?: boolean;
   }): Promise<number | null> {
+    // Every item notification must include a usable image. Never fall back to a text-only message.
+    if (!input.item.imageUrl || input.sendPhoto === false) return null;
+
     const title = input.item.title || `Item #${input.item.id}`;
     const price = `${(input.item.price.minor / 100).toFixed(2)} ${input.item.price.currency}`;
     const size = input.item.size ? ` • size ${input.item.size}` : "";
@@ -132,32 +135,16 @@ export class TelegramNotifier {
         httpsAgent: new https.Agent({ family: 4 })
       });
 
-      if (input.item.imageUrl && input.sendPhoto !== false) {
-        try {
-          const image = await axios.get<Buffer>(input.item.imageUrl, {
-            responseType: "arraybuffer",
-            timeout: 15_000
-          });
-          const form = new FormData();
-          form.append("chat_id", this.cfg.chatId);
-          form.append("photo", image.data, "vinted.jpg");
-          form.append("caption", this.clampCaption(caption));
-          form.append("parse_mode", "HTML");
-          const res = await http.post("/sendPhoto", form, { headers: form.getHeaders() });
-          const messageId = res?.data?.result?.message_id;
-          return typeof messageId === "number" ? messageId : null;
-        } catch (err) {
-          const code = (err as { code?: string } | null)?.code ?? "UNKNOWN";
-          console.error("[telegram] sendPhoto failed; falling back to sendMessage", { code });
-        }
-      }
-
-      const res = await http.post("/sendMessage", {
-        chat_id: this.cfg.chatId,
-        text: this.clampCaption(caption),
-        parse_mode: "HTML",
-        disable_web_page_preview: this.cfg.disableWebPreview ?? true
+      const image = await axios.get<Buffer>(input.item.imageUrl, {
+        responseType: "arraybuffer",
+        timeout: 15_000
       });
+      const form = new FormData();
+      form.append("chat_id", this.cfg.chatId);
+      form.append("photo", image.data, "vinted.jpg");
+      form.append("caption", this.clampCaption(caption));
+      form.append("parse_mode", "HTML");
+      const res = await http.post("/sendPhoto", form, { headers: form.getHeaders() });
       const messageId = res?.data?.result?.message_id;
       return typeof messageId === "number" ? messageId : null;
     } catch (err) {
