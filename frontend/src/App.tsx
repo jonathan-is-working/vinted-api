@@ -24,6 +24,40 @@ import {
   TelegramProfile
 } from "./types";
 
+const ARMED_ALERT_IDS_STORAGE_KEY = "armedAlertIdsByProfile";
+const LEGACY_ARMED_ALERT_IDS_STORAGE_KEY = "armedAlertIds";
+const UNASSIGNED_PROFILE_KEY = "__unassigned__";
+
+function profileKey(profileId: string | null): string {
+  return profileId ?? UNASSIGNED_PROFILE_KEY;
+}
+
+function parseAlertIds(value: string | null): string[] {
+  try {
+    const parsed = value ? (JSON.parse(value) as unknown) : null;
+    return Array.isArray(parsed) ? parsed.filter((id): id is string => typeof id === "string") : [];
+  } catch {
+    return [];
+  }
+}
+
+function parseArmedAlertIdsByProfile(value: string | null): Record<string, string[]> {
+  try {
+    const parsed = value ? (JSON.parse(value) as unknown) : null;
+    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) return {};
+
+    return Object.fromEntries(
+      Object.entries(parsed).flatMap(([key, ids]) =>
+        Array.isArray(ids)
+          ? [[key, ids.filter((id): id is string => typeof id === "string")]]
+          : []
+      )
+    );
+  } catch {
+    return {};
+  }
+}
+
 function DashboardApp() {
   const [activeView, setActiveView] = useState<"live" | "search">("live");
   const [sidebarOpen, setSidebarOpen] = useState(() => window.innerWidth >= 1024);
@@ -84,26 +118,31 @@ function DashboardApp() {
   const [telegramProfilesOpen, setTelegramProfilesOpen] = useState(false);
   const [alertsLoading, setAlertsLoading] = useState(false);
   const [selectedAlertId, setSelectedAlertId] = useState<string | null>(null);
-  const [armedInit] = useState(() => {
+  const [hasStoredArmedAlertIdsByProfile] = useState(() => {
     try {
-      return localStorage.getItem("armedAlertIds") != null;
+      return localStorage.getItem(ARMED_ALERT_IDS_STORAGE_KEY) != null;
     } catch {
       return false;
     }
   });
-  const [armedAlertIds, setArmedAlertIds] = useState<string[]>(() => {
+  const [legacyArmedAlertIds] = useState<string[]>(() => {
     try {
-      const raw = localStorage.getItem("armedAlertIds");
-      const parsed = raw ? (JSON.parse(raw) as unknown) : null;
-      return Array.isArray(parsed) ? parsed.filter((v) => typeof v === "string") : [];
+      return parseAlertIds(localStorage.getItem(LEGACY_ARMED_ALERT_IDS_STORAGE_KEY));
     } catch {
       return [];
+    }
+  });
+  const [armedAlertIdsByProfile, setArmedAlertIdsByProfile] = useState<Record<string, string[]>>(() => {
+    try {
+      return parseArmedAlertIdsByProfile(localStorage.getItem(ARMED_ALERT_IDS_STORAGE_KEY));
+    } catch {
+      return {};
     }
   });
   const [streamItems, setStreamItems] = useState<SearchItem[]>([]);
   const esRef = useRef<EventSource | null>(null);
   const liveModeRef = useRef(liveMode);
-  const armedIdsRef = useRef<string[]>(armedAlertIds);
+  const armedIdsRef = useRef<string[]>([]);
 
   const [selectedItem, setSelectedItem] = useState<SearchItem | null>(null);
   const [details, setDetails] = useState<ItemDetails | null>(null);
@@ -112,6 +151,20 @@ function DashboardApp() {
   const items = useMemo(() => {
     return activeView === "live" ? streamItems : data?.items ?? [];
   }, [activeView, data?.items, streamItems]);
+
+  const activeProfileAlerts = useMemo(
+    () => activeProfileId ? alerts.filter((alert) => alert.telegramProfileId === activeProfileId) : [],
+    [activeProfileId, alerts]
+  );
+  const activeProfileKey = profileKey(activeProfileId);
+  const armedAlertIds = armedAlertIdsByProfile[activeProfileKey] ?? [];
+  const setArmedAlertIds = (update: React.SetStateAction<string[]>) => {
+    setArmedAlertIdsByProfile((previous) => {
+      const current = previous[activeProfileKey] ?? [];
+      const next = typeof update === "function" ? update(current) : update;
+      return { ...previous, [activeProfileKey]: Array.from(new Set(next)) };
+    });
+  };
 
   const categoryOptions = useMemo(() => {
     const byParent = new Map<number | null, CatalogCategory[]>();
@@ -138,15 +191,32 @@ function DashboardApp() {
     try {
       const list = await api<Alert[]>("/v1/alerts");
       setAlerts(list);
-      if (!selectedAlertId && list[0]?.id) setSelectedAlertId(list[0].id);
-      // Keep armed ids in-sync with existing alerts (prevents stale counts after DB reset / deletions).
-      setArmedAlertIds((prev) => {
-        const existing = new Set(list.map((a) => a.id));
-        const cleaned = prev.filter((id) => existing.has(id));
-        if (cleaned.length) return cleaned;
-        // Only auto-arm on the very first run (when there is no localStorage state yet).
-        if (!armedInit) return list.map((a) => a.id);
-        return [];
+      // Store armed IDs by Telegram profile so one profile cannot affect another.
+      setArmedAlertIdsByProfile((previous) => {
+        const alertIdsByProfile = new Map<string, string[]>();
+        for (const alert of list) {
+          const key = profileKey(alert.telegramProfileId);
+          const ids = alertIdsByProfile.get(key) ?? [];
+          ids.push(alert.id);
+          alertIdsByProfile.set(key, ids);
+        }
+
+        const next: Record<string, string[]> = {};
+        for (const [key, ids] of alertIdsByProfile) {
+          if (key in previous) {
+            const existing = new Set(ids);
+            next[key] = previous[key].filter((id) => existing.has(id));
+            continue;
+          }
+
+          const migrated = legacyArmedAlertIds.filter((id) => ids.includes(id));
+          next[key] = migrated.length || legacyArmedAlertIds.length
+            ? migrated
+            : hasStoredArmedAlertIdsByProfile
+              ? []
+              : ids;
+        }
+        return next;
       });
     } catch (e) {
       console.error("Failed to load alerts", e);
@@ -154,6 +224,14 @@ function DashboardApp() {
       setAlertsLoading(false);
     }
   }
+
+  useEffect(() => {
+    setSelectedAlertId((current) =>
+      current && activeProfileAlerts.some((alert) => alert.id === current)
+        ? current
+        : activeProfileAlerts[0]?.id ?? null
+    );
+  }, [activeProfileAlerts]);
 
   async function loadTelegramProfiles() {
     try {
@@ -633,11 +711,11 @@ function DashboardApp() {
 
   useEffect(() => {
     try {
-      localStorage.setItem("armedAlertIds", JSON.stringify(armedAlertIds));
+      localStorage.setItem(ARMED_ALERT_IDS_STORAGE_KEY, JSON.stringify(armedAlertIdsByProfile));
     } catch {
       // ignore
     }
-  }, [armedAlertIds]);
+  }, [armedAlertIdsByProfile]);
 
   useEffect(() => {
     liveModeRef.current = liveMode;
@@ -894,7 +972,7 @@ function DashboardApp() {
       <Sidebar
         open={sidebarOpen}
         setOpen={setSidebarOpen}
-        alerts={alerts}
+        alerts={activeProfileAlerts}
         alertsLoading={alertsLoading}
         selectedAlertId={selectedAlertId}
         setSelectedAlertId={(id) => {
@@ -912,7 +990,7 @@ function DashboardApp() {
         setArmedAlertIds={setArmedAlertIds}
         deleteAlert={deleteAlert}
         onEditAlert={(id) => {
-          const a = alerts.find((x) => x.id === id);
+          const a = activeProfileAlerts.find((x) => x.id === id);
           if (!a) return;
           setEditingAlertId(id);
           loadFiltersFromAlert(a);
