@@ -124,26 +124,6 @@ cp .env.example .env
 docker compose up --build -d
 ```
 
-### Hot-reload Dev Stack
-```bash
-./dev.sh
-```
-
-### Observability Stack (Optional)
-To run with Grafana, Loki, and Promtail:
-```bash
-docker compose -f docker-compose.yml -f docker-compose.observability.yml up -d
-```
-
----
-
-## 📚 Documentation & Scripts
-
-- [DESIGN.md](DESIGN.md) — Architecture and design tokens.
-- [curl.md](curl.md) — Reference cURL templates for upstream debugging.
-- `scripts/resend-missed.sh` — Resend undelivered local notifications.
-- `scripts/reconnect-network.sh` — Optional NetworkManager watchdog job for Linux hosts.
-
 ---
 
 ## 🤝 Contributing

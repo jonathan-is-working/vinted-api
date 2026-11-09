@@ -21,9 +21,6 @@ services:
         max-size: "50m"
         max-file: "10"
         tag: "postgres"
-    labels:
-      logging: "promtail"
-      service: "postgres"
     networks:
       - db
 
@@ -69,9 +66,6 @@ services:
         max-size: "50m"
         max-file: "10"
         tag: "backend"
-    labels:
-      logging: "promtail"
-      service: "backend"
     networks:
       - db
       - public
@@ -94,9 +88,6 @@ services:
         max-size: "50m"
         max-file: "10"
         tag: "frontend"
-    labels:
-      logging: "promtail"
-      service: "frontend"
     networks:
       - public
 
