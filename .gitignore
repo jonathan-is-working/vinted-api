@@ -13,3 +13,7 @@ npm-debug.log*
 
 # Coverage
 coverage/
+
+# Agent skills & local configs (private)
+.agents/
+.agent/
