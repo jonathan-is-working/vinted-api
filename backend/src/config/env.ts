@@ -51,7 +51,8 @@ const EnvSchema = z.object({
     .enum(["0", "1", "true", "false"])
     .optional()
     .transform((v) => (v == null ? false : v === "1" || v === "true")),
-  TELEGRAM_CLEAR_LIMIT: z.coerce.number().int().min(1).max(200).default(50)
+  TELEGRAM_CLEAR_LIMIT: z.coerce.number().int().min(1).max(200).default(50),
+  TELEGRAM_DEFAULT_PROFILE_NAME: z.string().trim().min(1).max(80).default("Default")
 });
 
 export type Env = z.infer<typeof EnvSchema>;

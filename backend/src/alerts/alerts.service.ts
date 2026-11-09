@@ -231,7 +231,7 @@ export class AlertsService {
     let scanned = 0;
     let created = 0;
     let sent = 0;
-    let failed = 0;
+    const failed = 0;
 
     for (let page = 1; page <= maxPages; page += 1) {
       const res = await this.searchService.search({

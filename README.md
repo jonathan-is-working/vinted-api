@@ -1,6 +1,9 @@
-# Friply
+# Friply (`vinted-api`)
 
 Production-ready starter for a proxy API in front of Vinted’s internal search, plus a minimal UI to validate the end-to-end flow.
+
+> [!WARNING]
+> **Disclaimer**: This is an unofficial, community-driven project and is **not** affiliated with, authorized, maintained, sponsored, or endorsed by Vinted or any of its affiliates. Use this tool at your own risk. It is intended solely for personal, research, and educational purposes. Ensure you comply with all applicable terms of service.
 
 ## Backend (Fastify + TypeScript)
 
@@ -12,7 +15,7 @@ npm install
 npm run playwright:install
 cp .env.example .env
 # Default mode uses Playwright to bootstrap an anonymous session automatically.
-# If you want manual/static mode, set VINTED_SESSION_MODE=static and fill VINTED_* from curl.md.
+# If you want manual/static mode, set VINTED_SESSION_MODE=static and fill VINTED_* from your browser session (see curl.md for request templates).
 npm run dev
 ```
 
@@ -111,8 +114,10 @@ Rate limit notes:
 ## Docker (backend + Postgres)
 
 ```bash
-# Starts frontend (http://localhost:5173), backend (http://localhost:3000) and Postgres.
-# Provide VINTED_* in your shell or via an env file.
+# Copy and configure environment variables
+cp .env.example .env
+
+# Starts frontend (http://localhost:5000), backend (http://localhost:3000) and Postgres.
 docker compose up --build
 ```
 
@@ -147,3 +152,13 @@ VITE_API_BASE_URL=http://localhost:3000 npm run dev
 UI notes:
 - No external font/icon CDNs (system fonts + inline SVG icons) to avoid extra network requests.
 - No client-side caching: refreshes always hit the API for the latest data.
+
+## Utility Scripts
+
+The `scripts/` directory contains optional host-level maintenance scripts:
+- `scripts/resend-missed.sh`: Resends unsent Telegram notifications stored locally.
+- `scripts/install-network-reconnect.sh` / `reconnect-network.sh`: Optional NetworkManager watchdog job for dedicated Linux host machines.
+
+## License
+
+This project is licensed under the [MIT License](LICENSE).

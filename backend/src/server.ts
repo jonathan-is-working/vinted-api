@@ -60,7 +60,7 @@ if (telegramProfiles) await telegramProfiles.migrate();
 
 if (telegramProfiles && env.TELEGRAM_BOT_TOKEN && env.TELEGRAM_CHAT_ID) {
   const envProfile = await telegramProfiles.ensureFromEnv({
-    name: "Jonathan",
+    name: env.TELEGRAM_DEFAULT_PROFILE_NAME,
     botToken: env.TELEGRAM_BOT_TOKEN,
     chatId: env.TELEGRAM_CHAT_ID
   });
@@ -115,7 +115,7 @@ await registerV1Routes(app, {
   }
 });
 
-// eslint-disable-next-line @typescript-eslint/no-floating-promises
+ 
 alertsService.startAll();
 
 await app.listen({ port: env.PORT, host: env.HOST });

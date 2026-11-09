@@ -76,7 +76,7 @@ export async function registerTelegramRoutes(
     let cursor: number | undefined;
     let scanned = 0;
     let sent = 0;
-    let failed = 0;
+    const failed = 0;
     let processed = 0;
 
     while (processed < maxToProcess) {

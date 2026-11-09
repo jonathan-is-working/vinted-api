@@ -4,3 +4,12 @@ dist
 .env.*
 !.env.example
 docker-development-skill/
+
+# Build artifacts & caches
+*.tsbuildinfo
+.DS_Store
+*.log
+npm-debug.log*
+
+# Coverage
+coverage/
